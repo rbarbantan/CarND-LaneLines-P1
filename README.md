@@ -3,6 +3,6 @@
 
 
 ## Projects
-[P1 - Lane Lines](./P1-Lane-Lines\README.md)
+[P1 - Lane Lines](P1-Lane-Lines/README.md)
 
-[P2 - Advanced Lane Lines](./P2-Advanced-Lane-Lines\README.md)
+[P2 - Advanced Lane Lines](P2-Advanced-Lane-Lines/README.md)

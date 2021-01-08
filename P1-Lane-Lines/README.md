@@ -1,56 +1,80 @@
 # **Finding Lane Lines on the Road** 
-[![Udacity - Self-Driving Car NanoDegree](https://s3.amazonaws.com/udacity-sdc/github/shield-carnd.svg)](http://www.udacity.com/drive)
 
-<img src="examples/laneLines_thirdPass.jpg" width="480" alt="Combined Image" />
+### Project scope
 
-Overview
+The goals / steps of this project are the following:
+* Make a pipeline that finds lane lines on the road
+* Reflect on your work in a written report
+
 ---
+### Reflection
 
-When we drive, we use our eyes to decide where to go.  The lines on the road that show us where the lanes are act as our constant reference for where to steer the vehicle.  Naturally, one of the first things we would like to do in developing a self-driving car is to automatically detect lane lines using an algorithm.
+#### 1. Pipeline
 
-In this project you will detect lane lines in images using Python and OpenCV.  OpenCV means "Open-Source Computer Vision", which is a package that has many useful tools for analyzing images.  
+My original pipeline consisted of the following steps (for each individual image):
+ * first I convert the image to grayscale
+ * add some blurring to reduce some of the noise
+ * apply the Canny algorithm to find edges in the image
+ * since there are a lot of other objects (shapes, edges) on the road, 
+   we filter out everything outside our region of interest 
+   (where the road and lines usually are in the image)
+ * we then apply the Hough algorithm to extract the lines from the edges just found
+ * any lines found are then drawn on top of the original image
 
-To complete the project, two files will be submitted: a file containing project code and a file containing a brief write up explaining your solution. We have included template files to be used both for the [code](https://github.com/udacity/CarND-LaneLines-P1/blob/master/P1.ipynb) and the [writeup](https://github.com/udacity/CarND-LaneLines-P1/blob/master/writeup_template.md).The code file is called P1.ipynb and the writeup template is writeup_template.md 
+Still, to get to proper results, I had to fine-tune a lot of parameters for each of the steps mentioned above,
+like the size of the blurring kernel, parameters for the Canny and Hough algorithms, etc.
 
-To meet specifications in the project, take a look at the requirements in the [project rubric](https://review.udacity.com/#!/rubrics/322/view)
+So I have parametrized my `find_lanes` function implementing the pipeline, and used a [Jupyter notebook extension](https://ipywidgets.readthedocs.io/en/latest/examples/Widget%20List.html),
+to search for the best combination of parameters while getting live feedback:
+
+![widget](./widget.jpg)
+
+The first challenge was now to identify the left and right lines defining our current lane.
+So, I modified the `draw_lines()` function to:
+ * compute the *slope* of each line
+ * split the lines in two clusters: positive slope in one cluster, negative in another
+ * average lines in each cluster
+ * draw the two new averaged lines
+
+This solved the basic requirements of the project, by obtaining a decent enough aproximation of the two lane lines:
+
+![pipeline1](./test_images_output/solidWhiteRight.jpg)
+
+The project also has an optional challenge, on which the pipeline described above failed miserably.
+So a few adjustments were needed:
+* change the field of view to be defined not in absolute pixels, but relative to the image shape.
+  This way, the pipeline is more robust to images of different resolutions.
+* the final video contains a lot of shadows and irregularities in the color or the asphalt.
+  One fix was to add color filtering before grayscaling, to only allow nuances of white and yellow (the color of the lines)
+* Still, there were a lot of other unwanted lines, mostly perpendicular to our direction of travel.
+  Given that from our perspective the lane line are always having similar slopes, 
+  I did some pre-filtering based on the `slope` of the line being in some measured ranges (ex: *0=horizontal*, *1=45degrees*) 
+* finally, I replaced averaging the lines in a cluster with fitting a curve 
+  to best describe all of the points on the edges of the detected lines, giving me a 1st order polynomial (aka a straight line)
+
+With sufficient tuning all the steps above provided a decent solution for the challenge video as well:
+
+![challenge](./challenge.jpg)
 
 
-Creating a Great Writeup
----
-For this project, a great writeup should provide a detailed response to the "Reflection" section of the [project rubric](https://review.udacity.com/#!/rubrics/322/view). There are three parts to the reflection:
+#### 2. Shortcomings
 
-1. Describe the pipeline
-
-2. Identify any shortcomings
-
-3. Suggest possible improvements
-
-We encourage using images in your writeup to demonstrate how your pipeline works.  
-
-All that said, please be concise!  We're not looking for you to write a book here: just a brief description.
-
-You're not required to use markdown for your writeup.  If you use another method please just submit a pdf of your writeup. Here is a link to a [writeup template file](https://github.com/udacity/CarND-LaneLines-P1/blob/master/writeup_template.md). 
+Some of the shortcomings of the approach described above are:
+ * it is very fine-tuned for a couple of images, so most likely some of the parameters would need recalibrating for:
+    * different weather and lighting conditions
+    * different road types, with other colors for the road and lines
+    * different cameras and setups
+ * since it always approximates straight lines, it is not very accurate on curved roads
+ * the lines are computed in camera space, but to be really useful they would need to be in world/ego space
 
 
-The Project
----
+#### 3. Possible improvements
 
-## If you have already installed the [CarND Term1 Starter Kit](https://github.com/udacity/CarND-Term1-Starter-Kit/blob/master/README.md) you should be good to go!   If not, you should install the starter kit to get started on this project. ##
-
-**Step 1:** Set up the [CarND Term1 Starter Kit](https://github.com/udacity/CarND-Term1-Starter-Kit/blob/master/README.md) if you haven't already.
-
-**Step 2:** Open the code in a Jupyter Notebook
-
-You will complete the project code in a Jupyter notebook.  If you are unfamiliar with Jupyter Notebooks, check out [Udacity's free course on Anaconda and Jupyter Notebooks](https://classroom.udacity.com/courses/ud1111) to get started.
-
-Jupyter is an Ipython notebook where you can run blocks of code and see results interactively.  All the code for this project is contained in a Jupyter notebook. To start Jupyter in your browser, use terminal to navigate to your project directory and then run the following command at the terminal prompt (be sure you've activated your Python 3 carnd-term1 environment as described in the [CarND Term1 Starter Kit](https://github.com/udacity/CarND-Term1-Starter-Kit/blob/master/README.md) installation instructions!):
-
-`> jupyter notebook`
-
-A browser window will appear showing the contents of the current directory.  Click on the file called "P1.ipynb".  Another browser window will appear displaying the notebook.  Follow the instructions in the notebook to complete the project.  
-
-**Step 3:** Complete the project and submit both the Ipython notebook and the project writeup
-
-## How to write a README
-A well written README file can enhance your project and portfolio.  Develop your abilities to create professional README files by completing [this free course](https://www.udacity.com/course/writing-readmes--ud777).
-
+By trying to address the issues above, several improvements are possible:
+ * use a more adaptive approach to color filtering, exposure compensation, etc. 
+ * use a neural network to detect the line, as it could be more robust to variations in shape, color and position, 
+   if trained on varied enough examples
+ * approximate the lines with a higher order polynomial. In theory it should be more accurate in describing the lines, 
+   but in practice I did not get better results than the straight line
+ * if camera parameters are known, one could transform the lines from image space to ego space
+ * the execution time could be greatly improved by working more with vectorized numpy data, or by switching to c++    

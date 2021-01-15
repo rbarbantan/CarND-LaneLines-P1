@@ -1,4 +1,4 @@
-# **Finding Lane Lines on the Road** 
+# Finding Lane Lines on the Road 
 
 ### Project scope
 
@@ -8,6 +8,7 @@ The goals / steps of this project are the following:
 
 ---
 ### Reflection
+The entire project was developed in [this notebook](P1.ipynb). The steps are described below:
 
 #### 1. Pipeline
 

@@ -31,8 +31,10 @@ The goals / steps of this project are the following:
 ---
 ### Writeup / README
 
-The entire project was developed in [this notebook](https://nbviewer.jupyter.org/github/rbarbantan/Udacity-CarND/blob/master/P3-Traffic-Sign-Classifier/Traffic_Sign_Classifier.ipynb). 
-The steps are described below:
+The entire project was developed in [this notebook](Traffic_Sign_Classifier.ipynb).
+I have found that Github sometimes has issues rendering Jupyter notebooks, so the links used later in this page point
+to the *same notebook*, but rendered through [nbviewer.jupyter.org](https://nbviewer.jupyter.org/github/rbarbantan/Udacity-CarND/blob/master/P3-Traffic-Sign-Classifier/Traffic_Sign_Classifier.ipynb). 
+
 
 ### Data Set Summary & Exploration
 

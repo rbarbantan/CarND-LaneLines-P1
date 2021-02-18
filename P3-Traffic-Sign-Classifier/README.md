@@ -5,7 +5,7 @@
 **Build a Traffic Sign Recognition Project**
 
 The goals / steps of this project are the following:
-* Load the data set (see below for links to the project data set)
+* Load the [data set](https://benchmark.ini.rub.de/?section=gtsrb&subsection=dataset)
 * Explore, summarize and visualize the data set
 * Design, train and test a model architecture
 * Use the model to make predictions on new images
@@ -22,10 +22,11 @@ The goals / steps of this project are the following:
 [image6]: ./examples/web_top5_2.png "Web top 5"
 [image7]: ./examples/web_top5_3.png "Web top 5"
 [image8]: ./examples/web_top5_4.png "Web top 5"
-[image9]: ./examples/grad_cam_1.png "Grad-CAM"
-[image10]: ./examples/grad_cam_2.png "Grad-CAM"
-[image11]: ./examples/grad_cam_3.png "Grad-CAM"
-[image12]: ./examples/grad_cam_4.png "Grad-CAM"
+[image9]: ./examples/kernel_1.png "Kernel"
+[image10]: ./examples/kernel_2.png "Kernel"
+[image11]: ./examples/kernel_3.png "Kernel"
+[image12]: ./examples/kernel_4.png "Kernel"
+[image13]: ./examples/grad_cam.png "Grad-CAM"
 
 ---
 ### Writeup / README
@@ -76,7 +77,7 @@ From this on, I started with adding various changes to see if I can further impr
 |Convert to grayscale                     |        0.9690|             0.9615|color doesn't seem to be very important|
 |Augmentation: brightness, zoom, rotation |        0.9685|             0.9583|validation accuracy more stable at the end of training|
 |Augmentation: image shift                |        0.8424|             0.9161| does not help |
-|Introduce learning schedule              |        0.9607|             0.9741|               |
+|Introduce learning schedule              |        0.9657|             0.9837|               |
 
 The best results I saw for reducing the overfitting were from [image augmentation](https://nbviewer.jupyter.org/github/rbarbantan/Udacity-CarND/blob/master/P3-Traffic-Sign-Classifier/Traffic_Sign_Classifier.ipynb#Image-augmentation) and dropout, so I kept both.
 One thing to note is that not all augmentations were useful. For example, shifting the image made the model worse.
@@ -163,21 +164,22 @@ so that I don't risk overshooting the found minima.
 Regarding the batch size, I experimented with different values but I saw no visible differences, so I used 128, 
 small enough to fit into my GPU memory, but large enough to keep the GPU busy.
 
-The end result is a training accuracy of 0.967 and a validation accuracy of 0.9741.
+The end result is a training accuracy of 0.9657 and a validation accuracy of 0.9837.
 When computing the top-5 accuracy, the score is 0.9961 for train and 0.9966 for validation.
 
-Once these results were good enough, I used the test data as well and obtained an accuracy of **0.9568** and a top-5
-accuracy of **0.9939**.
+Once these results were good enough, I used the test data as well and obtained an accuracy of **0.9561** and a top-5
+accuracy of **0.9946**.
 Given that the test accuracy is smaller than the validation, but close to the training accuracy makes me think that
-the validation dataset is too small. Given some more data augmentation, training for a longer time, 
-and using a cross-validation technique might be a possible way to further improve the model's results. 
+next to a slight overfit on the train/validation data, the validation dataset itself is too small. 
+Given some more data augmentation, training for a longer time, and using a cross-validation technique 
+might lead to further improvements of the model's results. 
 
 ### Test a Model on New Images
 
 I searched on the web for some other examples of german traffic signs to see how the model performs on images outside of the provided dataset.
 
 I wanted to have a fully reproducible notebook, so I picked license-free images from Wikipedia, 
-that are [automatically downloaded](https://nbviewer.jupyter.org/github/rbarbantan/Udacity-CarND/blob/master/P3-Traffic-Sign-Classifier/Traffic_Sign_Classifier.ipynb#Load and Output the Images), 
+that are [automatically downloaded](https://nbviewer.jupyter.org/github/rbarbantan/Udacity-CarND/blob/master/P3-Traffic-Sign-Classifier/Traffic_Sign_Classifier.ipynb#Load-and-Output-the-Images), 
 [center-cropped and resized](https://nbviewer.jupyter.org/github/rbarbantan/Udacity-CarND/blob/master/P3-Traffic-Sign-Classifier/Traffic_Sign_Classifier.ipynb#Image-pre-processing) to our desired resolution. 
 
 The downside to this approach is that they are actually vector graphics and not photographs, and as such proved a too easy test for the model.
@@ -195,20 +197,30 @@ So for each image, I took the top-5 predicted classes and sampled images from th
 
 You can easily see that the model prefers classes with very similar shapes, and does not care much about the color.
 
-The last thing I tried was to also get a glimpse inside the model itself, so I tried and approach caled 
-*Gradient-weighted class activation mapping* (**Grad-CAM**). It basically tries to visualize the activations 
-for each layer of the model, to what parts of the image most influence the prediction. 
+Next, I was curious to see how the weights of each layer look like, which features do the [convolution kernels learn](https://nbviewer.jupyter.org/github/rbarbantan/Udacity-CarND/blob/master/P3-Traffic-Sign-Classifier/Traffic_Sign_Classifier.ipynb#Visualize-the-Neural-Network's-State-with-Test-Images).
 Below are some results for the 60 km/h speed limit sign:
 
-![grad-cam][image9]
+![kernel][image9]
 For the first conolutional layer, I believe the activations are sensitive to edges, trying to find straight lines or curves.
 
-![grad-cam][image10]
+![kernel][image10]
 The next layer seems to focus on the numbers themselves, perhaps trying to differentiate between the 30, 60, etc speed limit signs.
 
-![grad-cam][image11]
-![grad-cam][image12]
+![kernel][image11]
+![kernel][image12]
 I tried to get an intuition on the next layers as well, but I have to admit I didn't find any obvious pattern.
 
+The last thing I tried was to also get a glimpse inside the model itself, so I tried and approach caled 
+*Gradient-weighted class activation mapping* [Grad-CAM](https://nbviewer.jupyter.org/github/rbarbantan/Udacity-CarND/blob/master/P3-Traffic-Sign-Classifier/Traffic_Sign_Classifier.ipynb#Grad-CAM). 
+It basically tries to visualize the relationship between the last convolution layer activations and the class prediction.
+
+The result is a heatmap that can be overlaid on top of the original image to give a clue as to which region played
+an important role into making the final class prediction:
+
+![grad-cam][image13]
+For the round-about sign we can see that the round shape and the white arrows are the most important features,
+for the yield sign the corners are most important, and for the "go stright or right" the white arrow to the right has
+the most weight in the decision.
+
 Given this extra analysis, I am confident that the model did indeed learn to successfully predict traffic signs,
-and that having a 95.68 % accuracy on the test is quite a good result for such a small model.
+and that having a 95.61 % accuracy on the test is quite a good result for such a small model.

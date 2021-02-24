@@ -29,7 +29,7 @@ The goals / steps of this project are the following:
 [image13]: ./examples/grad_cam.png "Grad-CAM"
 
 ---
-### Writeup / README
+## Writeup / README
 
 The entire project was developed in [this notebook](Traffic_Sign_Classifier.ipynb).
 I have found that Github sometimes has issues rendering Jupyter notebooks, so the links used later in this page point
@@ -203,7 +203,7 @@ Next, I was curious to see how the weights of each layer look like, which featur
 Below are some results for the 60 km/h speed limit sign:
 
 ![kernel][image9]
-For the first conolutional layer, I believe the activations are sensitive to edges, trying to find straight lines or curves.
+For the first convolutional layer, I believe the activations are sensitive to edges, trying to find straight lines or curves.
 
 ![kernel][image10]
 The next layer seems to focus on the numbers themselves, perhaps trying to differentiate between the 30, 60, etc speed limit signs.
@@ -212,7 +212,7 @@ The next layer seems to focus on the numbers themselves, perhaps trying to diffe
 ![kernel][image12]
 I tried to get an intuition on the next layers as well, but I have to admit I didn't find any obvious pattern.
 
-The last thing I tried was to also get a glimpse inside the model itself, so I tried and approach caled 
+The last thing I tried was to also get a glimpse inside the model itself, so I tried an approach called 
 *Gradient-weighted class activation mapping* [Grad-CAM](https://nbviewer.jupyter.org/github/rbarbantan/Udacity-CarND/blob/master/P3-Traffic-Sign-Classifier/Traffic_Sign_Classifier.ipynb#Grad-CAM). 
 It basically tries to visualize the relationship between the last convolution layer activations and the class prediction.
 

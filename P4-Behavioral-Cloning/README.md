@@ -73,6 +73,6 @@ labels.append(label + delta_steering)
 
 |Dataset|Model|Output|
 |-------|-----|------|
-| 5456 | LeNet (as before) | ![experiment4](data/experiment_4.gif) |
+| 8184 | LeNet (as before) | ![experiment4](data/experiment_4.gif) |
 
 

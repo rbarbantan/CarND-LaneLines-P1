@@ -1,0 +1,10 @@
+flask-socketio==4.3.2
+python-socketio==4.6.1
+python-engineio==3.13.0
+eventlet
+flask
+tqdm
+scikit-learn
+tensorflow==2.3.0
+pydot
+graphviz

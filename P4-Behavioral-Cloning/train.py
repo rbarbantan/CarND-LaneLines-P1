@@ -5,9 +5,14 @@ from tensorflow.keras import Model, Sequential
 from tensorflow.keras.layers import Input, Flatten, Dense, MaxPooling2D, Conv2D, Lambda, Cropping2D, Dropout
 import tensorflow as tf
 from sklearn.model_selection import train_test_split
+import matplotlib.pyplot as plt
 
 
 def get_simple_model():
+    """
+    Simplest model to test that the pipeline is working correctly
+    :return: keras model
+    """
     model = Sequential()
     model.add(Lambda(lambda x: x / 255.0 - 0.5, input_shape=(160, 320, 3)))
     model.add(Flatten())
@@ -18,6 +23,10 @@ def get_simple_model():
 
 
 def get_model():
+    """
+    LeNet architecture
+    :return: keras model
+    """
     inputs = Input(shape=(160, 320, 3))  # input as received from simulation
     x = Lambda(lambda img: img / 255.0 - 0.5)(inputs)  # normalization
     x = Cropping2D(cropping=((70, 25), (0, 0)))(x)  # cropping out top and bottom of the image
@@ -42,31 +51,32 @@ def get_model():
     model.summary()
 
     # needs graphviz installed
-    tf.keras.utils.plot_model(model, to_file='data/model.png')
+    # tf.keras.utils.plot_model(model, to_file='data/model.png')
 
     return model
 
 
+def plot_history(history):
+    """
+    summarize history for loss
+    """
+    plt.plot(history.history['loss'])
+    plt.plot(history.history['val_loss'])
+    plt.title('model loss')
+    plt.ylabel('loss')
+    plt.xlabel('epoch')
+    plt.legend(['train', 'test'], loc='upper left')
+    plt.show()
+
+
 def train(args):
-    x, y = create_dataset(args.data_path, version='v1')
+    x, y = create_dataset(args.data_path, version='v2')
     print(f'Dataset shape {x.shape}')
 
-    x_train, x_val, y_train, y_val = train_test_split(x, y, test_size=0.2)
-
-    #gen = tf.keras.preprocessing.image.ImageDataGenerator(
-    #    featurewise_center=True,
-    #    featurewise_std_normalization=True)
-    #gen.fit(x_train[:1000])
-
     model = get_model()
-    #model = get_simple_model()
 
-    #model.fit(gen.flow(x_train, y_train, batch_size=32),
-    #          validation_data=gen.flow(x_val, y_val, batch_size=32),
-    #          validation_steps=len(x_val)/32,
-    #          epochs=5,
-    #          steps_per_epoch=len(x_train)/32)
-    model.fit(x, y, batch_size=32, validation_split=0.2, epochs=10)
+    history = model.fit(x, y, batch_size=32, validation_split=0.2, epochs=10)
+    plot_history(history)
 
     model.save('model.h5')
 

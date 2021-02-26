@@ -84,7 +84,7 @@ while during the drive they were given in RGB format. After the conversion to RG
 
 |Dataset|Model|Output|
 |-------|-----|------|
-| 8036 | ![model3](data/model_3.png)| ![experiment5](data/experiment_5.gif) |
+| 8036 | Normalization + LeNet| ![experiment5](data/experiment_5.gif) |
 
 Adding back the left and right images, and their flipped versions improved the model. 
 On top of that, cropping out the top (sky, trees) and bottom (car hood) with `Cropping2D(cropping=((70, 25), (0, 0)))` 
@@ -92,6 +92,77 @@ helped the model to complete the first track:
 
 |Dataset|Model|Output|
 |-------|-----|------|
-| 48216 | ![model4](data/model_4.png)| ![experiment6](data/experiment_6.gif) |
+| 48216 | Normalization + Crop + LeNet| ![experiment6](data/experiment_6.gif) |
 
+At this point the model is specialized on the first track, so I recreated the dataset to include for both tracks 2 laps
+(one in each direction) plus some examples of recovering from edges of the road. This was enough for the model to
+successfully complete both tracks, even at higher speeds.
 
+|Dataset|Model|Output|
+|-------|-----|------|
+| 50700 | Normalization + Crop + LeNet| ![experiment7](data/experiment_7.gif) ![experiment8](data/experiment_8.gif)|
+
+#### Final model
+As I am satisfied with the results, I decided to keep this model. As stated before, it consists of a normalization layer,
+a layer for cropping top and bottom parts of the image, plus the LeNet architecture mixed with two dropout layers.
+
+```
+_________________________________________________________________
+Layer (type)                 Output Shape              Param #   
+=================================================================
+input_1 (InputLayer)         [(None, 160, 320, 3)]     0         
+_________________________________________________________________
+lambda (Lambda)              (None, 160, 320, 3)       0         
+_________________________________________________________________
+cropping2d (Cropping2D)      (None, 65, 320, 3)        0         
+_________________________________________________________________
+conv2d (Conv2D)              (None, 61, 316, 6)        456       
+_________________________________________________________________
+max_pooling2d (MaxPooling2D) (None, 30, 158, 6)        0         
+_________________________________________________________________
+conv2d_1 (Conv2D)            (None, 26, 154, 16)       2416      
+_________________________________________________________________
+max_pooling2d_1 (MaxPooling2 (None, 13, 77, 16)        0         
+_________________________________________________________________
+flatten (Flatten)            (None, 16016)             0         
+_________________________________________________________________
+dense (Dense)                (None, 120)               1922040   
+_________________________________________________________________
+dropout (Dropout)            (None, 120)               0         
+_________________________________________________________________
+dense_1 (Dense)              (None, 84)                10164     
+_________________________________________________________________
+dropout_1 (Dropout)          (None, 84)                0         
+_________________________________________________________________
+dense_2 (Dense)              (None, 1)                 85        
+=================================================================
+Total params: 1,935,161
+Trainable params: 1,935,161
+Non-trainable params: 0
+_________________________________________________________________
+```
+
+The model was trained on 80 % of the mentioned dataset for `10 epochs` while the rest of 20 % was used for validation. 
+As it was a regression task the loss function used was *mean squared error* with `Adam` as optimizer 
+(but with a smaller `learning rate of 1e-4`)
+
+![loss](data/history.png)
+
+As you can see, the validation loss decreased very slow towards the end, unlike the training loss,
+which means that training for more epochs would probably only lead to overfitting on the training data.
+
+### Conclusion
+For a better demo of the final results, you can have a look at this [video](video.mp4).
+
+The best part of the project was testing the model. During the autonomous driving in the simulation, 
+I would take control, steer the car to the edge of the road and watch it recover back to the middle of the road.
+
+One limitation of the solution is that at higher speeds you can notice a slight zig-zag on straight sections of the road.
+Also, since in this setup we do not control the throttle, if the target speed is too high ( > 20 ), the car goes off
+the road, especially on the second track. 
+
+If I were to continue improving this project, I would:
+* play some more with learning rate scheduling
+* test other model architectures (like the one proposed by Nvidia, VGG, etc), or even use a pre-trained model
+* feed last `n` frames to the network merged into a single image os size `(n*160, 320, 3)`
+* feed last `n` frames into an LSTM network

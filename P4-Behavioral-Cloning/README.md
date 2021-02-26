@@ -75,4 +75,23 @@ labels.append(label + delta_steering)
 |-------|-----|------|
 | 8184 | LeNet (as before) | ![experiment4](data/experiment_4.gif) |
 
+I have gathered one more lap of data, but the network did not improve, so I started to debug the pipeline.
+
+I switched to the provided training data, and only used the central image to make sure I don't have a bug in my data gathering code.
+Sure enough, I was training the model with images loaded `cv2.imread` in BGR format, 
+while during the drive they were given in RGB format. After the conversion to RGB, and a simple normalization of the images
+(`img / 255.0 - 0.5`) we were back on track ( :drum: ). While a lot more stable, it missed the first curve after the bridge.
+
+|Dataset|Model|Output|
+|-------|-----|------|
+| 8036 | ![model3](data/model_3.png)| ![experiment5](data/experiment_5.gif) |
+
+Adding back the left and right images, and their flipped versions improved the model. 
+On top of that, cropping out the top (sky, trees) and bottom (car hood) with `Cropping2D(cropping=((70, 25), (0, 0)))` 
+helped the model to complete the first track:
+
+|Dataset|Model|Output|
+|-------|-----|------|
+| 48216 | ![model4](data/model_4.png)| ![experiment6](data/experiment_6.gif) |
+
 

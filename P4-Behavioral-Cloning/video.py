@@ -40,7 +40,7 @@ def main():
         clip = ImageSequenceClip(image_list, fps=args.fps)
         clip.write_videofile(args.image_folder + '.mp4')
     else:
-        clip = ImageSequenceClip(image_list[::12], fps=args.fps)  # keep gif file small
+        clip = ImageSequenceClip(image_list[::48], fps=args.fps)  # keep gif file small
         clip.write_gif(args.image_folder + '.gif', program='ffmpeg', fps=clip.fps)
 
     if args.cleanup:

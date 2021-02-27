@@ -1,11 +1,10 @@
 import argparse
 from dataset import create_dataset
-from tensorflow.keras.applications.inception_v3 import InceptionV3
 from tensorflow.keras import Model, Sequential
 from tensorflow.keras.layers import Input, Flatten, Dense, MaxPooling2D, Conv2D, Lambda, Cropping2D, Dropout
 import tensorflow as tf
-from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
+import time
 
 
 def get_simple_model():
@@ -22,7 +21,7 @@ def get_simple_model():
     return model
 
 
-def get_model():
+def get_lenet_model():
     """
     LeNet architecture
     :return: keras model
@@ -51,7 +50,38 @@ def get_model():
     model.summary()
 
     # needs graphviz installed
-    # tf.keras.utils.plot_model(model, to_file='data/model.png')
+    tf.keras.utils.plot_model(model, to_file='data/lenet.png')
+
+    return model
+
+
+def get_pilotnet_model():
+    """
+    Nvidia PilotNet architecture
+    :return: keras model
+    """
+    inputs = Input(shape=(160, 320, 3))  # input as received from simulation
+    x = Lambda(lambda img: img / 255.0 - 0.5)(inputs)  # normalization
+    x = Cropping2D(cropping=((70, 25), (0, 0)))(x)  # cropping out top and bottom of the image
+
+    x = Conv2D(filters=24, kernel_size=(5, 5), strides=(2, 2), activation="relu")(x)
+    x = Conv2D(filters=36, kernel_size=(5, 5), strides=(2, 2), activation="relu")(x)
+    x = Conv2D(filters=48, kernel_size=(5, 5), strides=(2, 2), activation="relu")(x)
+    x = Conv2D(filters=64, kernel_size=(3, 3), activation="relu")(x)
+    x = Conv2D(filters=64, kernel_size=(3, 3), activation="relu")(x)
+
+    x = Flatten()(x)
+    x = Dense(100, activation='relu')(x)
+    x = Dense(50, activation='relu')(x)
+    x = Dense(10, activation='relu')(x)
+    out = Dense(1, activation='linear')(x)
+
+    model = Model(inputs=inputs, outputs=out)
+    model.compile(loss='mse', optimizer=tf.keras.optimizers.Adam(learning_rate=1e-3))
+    model.summary()
+
+    # needs graphviz installed
+    tf.keras.utils.plot_model(model, to_file='data/pilotnet.png')
 
     return model
 
@@ -69,13 +99,23 @@ def plot_history(history):
     plt.show()
 
 
+def lr_scheduler(epoch, lr):
+    if epoch < 5:
+        return 1e-3
+    else:
+        return 1e-4
+
+
 def train(args):
     x, y = create_dataset(args.data_path, version='v2')
     print(f'Dataset shape {x.shape}')
 
-    model = get_model()
+    # model = get_lenet_model()
+    model = get_pilotnet_model()
 
-    history = model.fit(x, y, batch_size=32, validation_split=0.2, epochs=10)
+    reduce_lr = tf.keras.callbacks.LearningRateScheduler(lr_scheduler)
+    tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=f"./logs/{time.time()}")
+    history = model.fit(x, y, batch_size=32, validation_split=0.2, epochs=10, callbacks=[reduce_lr, tensorboard_callback])
     plot_history(history)
 
     model.save('model.h5')

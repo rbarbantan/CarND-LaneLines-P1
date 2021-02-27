@@ -14,7 +14,7 @@ The goals of the project are as follows:
 I used the [provided simulator](https://github.com/udacity/self-driving-car-sim) which is a standalone application
 based on Unity, created specifically for this project.
 
-For data collection I used initially intended to use a PS4 controller instead of keyboard or mouse, 
+For data collection I initially intended to use a PS4 controller instead of keyboard or mouse, 
 as it is easier to drive the car around, and it should provide more accurate (smoother changes in) values 
 for the steering command used further in the project. As a result, I used ( `Term 1 - Version 1, 12/09/16` ) 
 as the latest one does not support the PS4 controller.
@@ -94,7 +94,7 @@ helped the model to complete the first track:
 |-------|-----|------|
 | 48216 | Normalization + Crop + LeNet| ![experiment6](data/experiment_6.gif) |
 
-At this point the model is specialized on the first track, so I recreated the dataset to include for both tracks 2 laps
+At this point the model is specialized on the first track, so I recreated the dataset to include for each of the two tracks two laps
 (one in each direction) plus some examples of recovering from edges of the road. This was enough for the model to
 successfully complete both tracks, even at higher speeds.
 
@@ -102,10 +102,21 @@ successfully complete both tracks, even at higher speeds.
 |-------|-----|------|
 | 50700 | Normalization + Crop + LeNet| ![experiment7](data/experiment_7.gif) ![experiment8](data/experiment_8.gif)|
 
-#### Final model
-As I am satisfied with the results, I decided to keep this model. As stated before, it consists of a normalization layer,
-a layer for cropping top and bottom parts of the image, plus the LeNet architecture mixed with two dropout layers.
+I am quite happy with the results, but I noticed that by training on low quality data, the model doesn't perform
+as good when tested on higher quality rendered images. My guess is that it gets confused by the tree shadows on the road
+that appear only on higher quality images. This also means that the network does not generalize as good as I thought.
 
+### Final model
+First fix was to re-record the dataset in higher quality, and to explore the smaller [PilotNet](https://arxiv.org/pdf/1704.07911.pdf) model from Nvidia.
+This new model also completed both tracks, but it reaches a lower mean squared error on the validation set 
+while being almost 6 times smaller (348,219 vs 1,935,161 parameters)
+
+|LeNet| |PilotNet| |
+|---|---|-----|----|
+|Architecture|Loss|Architecture|Loss|
+|![lenet model](data/model_4.png)|![lenet loss](data/lenet_loss.png)|![pilotnet model](data/pilotnet.png)|![pilotnet loss](data/pilotnet_loss.png)|
+
+Here is a more detailed look into the final architecture and layer shapes:
 ```
 _________________________________________________________________
 Layer (type)                 Output Shape              Param #   
@@ -116,53 +127,55 @@ lambda (Lambda)              (None, 160, 320, 3)       0
 _________________________________________________________________
 cropping2d (Cropping2D)      (None, 65, 320, 3)        0         
 _________________________________________________________________
-conv2d (Conv2D)              (None, 61, 316, 6)        456       
+conv2d (Conv2D)              (None, 31, 158, 24)       1824      
 _________________________________________________________________
-max_pooling2d (MaxPooling2D) (None, 30, 158, 6)        0         
+conv2d_1 (Conv2D)            (None, 14, 77, 36)        21636     
 _________________________________________________________________
-conv2d_1 (Conv2D)            (None, 26, 154, 16)       2416      
+conv2d_2 (Conv2D)            (None, 5, 37, 48)         43248     
 _________________________________________________________________
-max_pooling2d_1 (MaxPooling2 (None, 13, 77, 16)        0         
+conv2d_3 (Conv2D)            (None, 3, 35, 64)         27712     
 _________________________________________________________________
-flatten (Flatten)            (None, 16016)             0         
+conv2d_4 (Conv2D)            (None, 1, 33, 64)         36928     
 _________________________________________________________________
-dense (Dense)                (None, 120)               1922040   
+flatten (Flatten)            (None, 2112)              0         
 _________________________________________________________________
-dropout (Dropout)            (None, 120)               0         
+dense (Dense)                (None, 100)               211300    
 _________________________________________________________________
-dense_1 (Dense)              (None, 84)                10164     
+dense_1 (Dense)              (None, 50)                5050      
 _________________________________________________________________
-dropout_1 (Dropout)          (None, 84)                0         
+dense_2 (Dense)              (None, 10)                510       
 _________________________________________________________________
-dense_2 (Dense)              (None, 1)                 85        
+dense_3 (Dense)              (None, 1)                 11        
 =================================================================
-Total params: 1,935,161
-Trainable params: 1,935,161
+Total params: 348,219
+Trainable params: 348,219
 Non-trainable params: 0
 _________________________________________________________________
 ```
 
 The model was trained on 80 % of the mentioned dataset for `10 epochs` while the rest of 20 % was used for validation. 
-As it was a regression task the loss function used was *mean squared error* with `Adam` as optimizer 
-(but with a smaller `learning rate of 1e-4`)
+As it was a regression task the loss function used was *mean squared error* with `Adam` as optimizer. For the `learning rate`
+a very simple schedule was used: 1e-3 for the first 5 epochs, and then 1e-4 for the final 5.
 
-![loss](data/history.png)
-
-As you can see, the validation loss decreased very slow towards the end, unlike the training loss,
-which means that training for more epochs would probably only lead to overfitting on the training data.
 
 ### Conclusion
-For a better demo of the final results, you can have a look at this [video](video.mp4).
 
 The best part of the project was testing the model. During the autonomous driving in the simulation, 
 I would take control, steer the car to the edge of the road and watch it recover back to the middle of the road.
+![push](data/push.gif)
 
 One limitation of the solution is that at higher speeds you can notice a slight zig-zag on straight sections of the road.
 Also, since in this setup we do not control the throttle, if the target speed is too high ( > 20 ), the car goes off
-the road, especially on the second track. 
+the road in tight curves, especially on the second track.
+
+For a better demo of the final results, you can have a look at this [video](video.mp4).
 
 If I were to continue improving this project, I would:
 * play some more with learning rate scheduling
-* test other model architectures (like the one proposed by Nvidia, VGG, etc), or even use a pre-trained model
-* feed last `n` frames to the network merged into a single image os size `(n*160, 320, 3)`
+* use more data augmentation 
+    * adjust the brightness to account for areas with large shadows
+* test other model architectures (like VGG), and experiment with using pre-trained weights
+* feed last `n` frames to the network merged into a single image os size `(n*160, 320, 3)` to get a smoother trajectory
 * feed last `n` frames into an LSTM network
+* experiment with reinforcement learning
+

@@ -33,8 +33,8 @@ I had to use older versions for some libraries (like `python-socketio` and `pyth
 between python scripts and the simulator.
 
 Other changes to the provided code included:
-  * fix [keras version check](drive.py) to be compatible with latest keras version inside tensorflow
-  * change the [video generation](video.py) to support .gif format, to be able to include examples in this writeup 
+  * fix [keras version check](drive.py#L116) to be compatible with latest keras version inside tensorflow
+  * change the [video generation](video.py#L45) to support .gif format, to be able to include examples in this writeup 
 
 ### Pipeline
 All the training code is stored in the [train.py](train.py) script.
@@ -79,7 +79,7 @@ I have gathered one more lap of data, but the network did not improve, so I star
 
 I switched to the provided training data, and only used the central image to make sure I don't have a bug in my data gathering code.
 Sure enough, I was training the model with images loaded `cv2.imread` in BGR format, 
-while during the drive they were given in RGB format. After the conversion to RGB, and a simple normalization of the images
+while during the drive they were given in RGB format. After the conversion to RGB, and a simple [normalization](train.py#L30) of the images
 (`img / 255.0 - 0.5`) we were back on track ( :drum: ). While a lot more stable, it missed the first curve after the bridge.
 
 |Dataset|Model|Output|
@@ -108,7 +108,7 @@ that appear only on higher quality images. This also means that the network does
 
 ### Final model
 First fix was to re-record the dataset in higher quality, and to explore the smaller [PilotNet](https://arxiv.org/pdf/1704.07911.pdf) model from Nvidia.
-This new model also completed both tracks, but it reaches a lower mean squared error on the validation set 
+This [new model](train.py#L58) also completed both tracks, but it reaches a lower mean squared error on the validation set 
 while being almost 6 times smaller (348,219 vs 1,935,161 parameters)
 
 |LeNet| |PilotNet| |
@@ -153,7 +153,7 @@ Non-trainable params: 0
 _________________________________________________________________
 ```
 
-The model was trained on 80 % of the mentioned dataset for `10 epochs` while the rest of 20 % was used for validation. 
+The model [was trained](train.py#L118) on 80 % of the mentioned dataset for `10 epochs` while the rest of 20 % was used for validation. 
 As it was a regression task the loss function used was *mean squared error* with `Adam` as optimizer. For the `learning rate`
 a very simple schedule was used: 1e-3 for the first 5 epochs, and then 1e-4 for the final 5.
 
@@ -162,6 +162,7 @@ a very simple schedule was used: 1e-3 for the first 5 epochs, and then 1e-4 for 
 
 The best part of the project was testing the model. During the autonomous driving in the simulation, 
 I would take control, steer the car to the edge of the road and watch it recover back to the middle of the road.
+
 ![push](data/push.gif)
 
 One limitation of the solution is that at higher speeds you can notice a slight zig-zag on straight sections of the road.

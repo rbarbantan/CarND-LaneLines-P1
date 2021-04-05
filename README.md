@@ -11,3 +11,5 @@ This repository is a collection of my submissions required for this nanodegree.
 [P3 - Traffic Sign Classifier](P3-Traffic-Sign-Classifier)
 
 [P4 - Behavioral Cloning](P4-Behavioral-Cloning)
+
+[P5 - Extended Kalman Filter](P5-Extended-Kalman-Filter)

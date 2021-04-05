@@ -68,8 +68,6 @@ void KalmanFilter::UpdateEKF(const VectorXd &z) {
   // keep the theta for the y in -PI,PI range, 
   // to avoid big error in the middle of the Dataset 1 
   // when the theta sign is changing
-  //while (y(1) < -M_PI) y(1) += 2 * M_PI;
-	//while (y(1) > M_PI) y(1) -= 2 * M_PI;
   float signed_pi = std::copysign(M_PI, y(1));
   y(1) = std::fmod(y(1) + signed_pi,(2 * M_PI)) - signed_pi;
 

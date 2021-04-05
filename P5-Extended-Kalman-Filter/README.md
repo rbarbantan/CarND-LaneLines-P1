@@ -28,7 +28,8 @@ My contribution was mostly replacing those TODOs with the code developed through
 The only issue I have encountered was with handling the sign of the theta angle when updating the model with measurements from the radar.
 Kepping the angle in the -pi/pi range solved the issue.
 
-The only files that were changed from the given template were src/FusionEKF.cpp, src/FusionEKF.h, kalman_filter.cpp, kalman_filter.h, tools.cpp, and tools.h
+The only files that were changed from the given template were [FusionEKF.cpp](src/FusionEKF.cpp), [FusionEKF.h](src/FusionEKF.h), 
+[kalman_filter.cpp](src/kalman_filter.cpp), [kalman_filter.h](src/kalman_filter.h), [tools.cpp](src/tools.cpp), and [tools.h](src/tools.h)
 
 
 ## Other Important Dependencies

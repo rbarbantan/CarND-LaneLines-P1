@@ -5,9 +5,12 @@
 #include <string>
 #include <vector>
 
+#include "Eigen-3.3/Eigen/Dense"
+
 // for convenience
 using std::string;
 using std::vector;
+using Eigen::MatrixXd;
 
 // Checks if the SocketIO event has JSON data.
 // If there is data the JSON object in string format will be returned,
@@ -152,6 +155,55 @@ vector<double> getXY(double s, double d, const vector<double> &maps_s,
   double y = seg_y + d*sin(perp_heading);
 
   return {x,y};
+}
+
+vector<double> JMT(vector<double> &start, vector<double> &end, double T) {
+  /**
+   * Calculate the Jerk Minimizing Trajectory that connects the initial state
+   * to the final state in time T.
+   *
+   * @param start - the vehicles start location given as a length three array
+   *   corresponding to initial values of [s, s_dot, s_double_dot]
+   * @param end - the desired end state for vehicle. Like "start" this is a
+   *   length three array.
+   * @param T - The duration, in seconds, over which this maneuver should occur.
+   *
+   * @output an array of length 6, each value corresponding to a coefficent in 
+   *   the polynomial:
+   *   s(t) = a_0 + a_1 * t + a_2 * t**2 + a_3 * t**3 + a_4 * t**4 + a_5 * t**5
+   *
+   * EXAMPLE
+   *   > JMT([0, 10, 0], [10, 10, 0], 1)
+   *     [0.0, 10.0, 0.0, 0.0, 0.0, 0.0]
+   */
+  MatrixXd A = MatrixXd(3, 3);
+  A << T*T*T, T*T*T*T, T*T*T*T*T,
+       3*T*T, 4*T*T*T,5*T*T*T*T,
+       6*T, 12*T*T, 20*T*T*T;
+    
+  MatrixXd B = MatrixXd(3,1);     
+  B << end[0]-(start[0]+start[1]*T+.5*start[2]*T*T),
+       end[1]-(start[1]+start[2]*T),
+       end[2]-start[2];
+          
+  MatrixXd Ai = A.inverse();
+  
+  MatrixXd C = Ai*B;
+  
+  vector <double> result = {start[0], start[1], .5*start[2]};
+
+  for(int i = 0; i < C.size(); ++i) {
+    result.push_back(C.data()[i]);
+  }
+
+  return result;
+}
+
+void print_vector(vector<double> v) {
+  for (auto p : v) {
+    std::cout << p << ",";
+  }
+  std::cout << "\n";
 }
 
 #endif  // HELPERS_H

@@ -14,8 +14,9 @@ using std::vector;
 /**
  * TODO: change weights for cost functions.
  */
-const float REACH_GOAL = 0;
-const float EFFICIENCY = 2;
+const float REACH_GOAL = 1;
+const float EFFICIENCY = 0;
+const float EXP = 0;
 
 // Here we have provided two possible suggestions for cost functions, but feel 
 //   free to use your own! The weighted cost over all cost functions is computed
@@ -35,6 +36,7 @@ float goal_distance_cost(const Vehicle &vehicle,
   //   "Implement a Cost Function in C++" quiz.
   float cost;
   float distance = data["distance_to_goal"];
+  //std::cout << "dist: " << distance << ", ";
   if (distance > 0) {
     //cost = 1 - 2*exp(-(abs(2.0*vehicle.goal_lane - data["intended_lane"] 
     //     - data["final_lane"]) / distance));
@@ -55,27 +57,27 @@ float inefficiency_cost(const Vehicle &vehicle,
   // You can use the lane_speed function to determine the speed for a lane. 
   // This function is very similar to what you have already implemented in 
   //   the "Implement a Second Cost Function in C++" quiz.
-  float proposed_speed_intended = lane_speed(predictions, data["intended_lane"], vehicle.s + 60);
+  float proposed_speed_intended = lane_speed(predictions, data["intended_lane"], vehicle.s + 30);
   if (proposed_speed_intended < 0) {
     proposed_speed_intended = vehicle.target_speed;
   }
 
-  float proposed_speed_final = lane_speed(predictions, data["final_lane"], vehicle.s + 60);
+  float proposed_speed_final = lane_speed(predictions, data["final_lane"], vehicle.s + 30);
   if (proposed_speed_final < 0) {
     proposed_speed_final = vehicle.target_speed;
   }
     
-  float cost = (2.0*vehicle.target_speed - proposed_speed_intended 
-             - proposed_speed_final)/vehicle.target_speed;
-
+  //float cost = (2.0*vehicle.target_speed - proposed_speed_intended 
+  //           - proposed_speed_final)/vehicle.target_speed;
+  float cost = (vehicle.target_speed - proposed_speed_final)/vehicle.target_speed;
   return cost;
 }
 
-float acceleration_cost(const Vehicle &vehicle, 
+float exp_cost(const Vehicle &vehicle, 
                         const vector<Vehicle> &trajectory, 
                         const map<int, vector<Vehicle>> &predictions, 
                         map<string, float> &data) {
-  return 0;
+  return 1;
 }
 
 float lane_speed(const map<int, vector<Vehicle>> &predictions, int lane, int range) {
@@ -105,12 +107,13 @@ float calculate_cost(const Vehicle &vehicle,
   vector<std::function<float(const Vehicle &, const vector<Vehicle> &, 
                              const map<int, vector<Vehicle>> &, 
                              map<string, float> &)
-    >> cf_list = {goal_distance_cost, inefficiency_cost};
-  vector<float> weight_list = {REACH_GOAL, EFFICIENCY};
+    >> cf_list = {goal_distance_cost, inefficiency_cost, exp_cost};
+  vector<float> weight_list = {REACH_GOAL, EFFICIENCY, EXP};
     
   for (int i = 0; i < cf_list.size(); ++i) {
     float new_cost = weight_list[i]*cf_list[i](vehicle, trajectory, predictions, 
                                                trajectory_data);
+    //std::cout << new_cost << " ";
     cost += new_cost;
   }
   

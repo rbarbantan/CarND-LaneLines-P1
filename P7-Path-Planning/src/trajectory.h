@@ -6,6 +6,8 @@
 
 #include "Eigen-3.3/Eigen/Dense"
 #include "helpers.h"
+#include "spline.h"
+
 
 using std::vector;
 
@@ -37,7 +39,7 @@ vector<vector<double>> get_simple_frenet(double car_s, vector<double> map_waypoi
     return {next_x_vals, next_y_vals};
 }
 
-vector<vector<double>> trajectory_for_target(double car_x, double car_y, double car_yaw, double car_s,
+vector<vector<double>> trajectory_for_target(double car_x, double car_y, double car_yaw, double car_s, double car_d, double car_speed,
                                              vector<double> previous_path_x, vector<double> previous_path_y, 
                                              vector<double> map_waypoints_s, vector<double> map_waypoints_x, vector<double> map_waypoints_y,
                                              double target_s, double target_d, double target_speed) {
@@ -113,18 +115,26 @@ vector<vector<double>> trajectory_for_target(double car_x, double car_y, double 
         next_y_vals.push_back(previous_path_y[i]);
     }
 
-    double target_x = 30; //target_s - car_s;
+    double target_x = 30;
+    //double target_x = target_s - car_s;
     double target_y = s(target_x);
     double target_dist = sqrt(target_x*target_x + target_y*target_y);
     double x_addon = 0;
-    
-    double actual_speed = 1; // start slow
+
+    double actual_speed = 1;
     if (prev_size >= 2) {
         double last_speed = distance(previous_path_x[prev_size-1], previous_path_y[prev_size-1], previous_path_x[prev_size-2], previous_path_y[prev_size-2]) / DT;
-        double desired_acc = target_speed - last_speed;
-        double actual_acc = std::max(-MAX_ACC, std::min(MAX_ACC, desired_acc));
-        actual_speed = last_speed + actual_acc * DT;
+        double diff = target_speed - last_speed;
+        double gap = 0.3;
+        if (diff > gap) {
+            actual_speed = last_speed + gap;
+        } else if (diff < 0) {
+            actual_speed = last_speed - gap;
+        } else {
+            actual_speed = last_speed;
+        }
     }
+    printf("target speed: %f, actual speed: %f\n", target_speed, actual_speed);
     for (int i = 1; i <= 50 - prev_size; ++i)
     {
         double n = target_dist / (DT * actual_speed);
@@ -146,6 +156,18 @@ vector<vector<double>> trajectory_for_target(double car_x, double car_y, double 
         next_x_vals.push_back(x_point);
         next_y_vals.push_back(y_point);
     }
+
+    vector<double> velocities;
+    for (int i=1; i<next_x_vals.size(); i++) {
+        double d = distance(next_x_vals[i], next_y_vals[i], next_x_vals[i-1], next_y_vals[i-1]);
+        velocities.push_back(d/DT);
+    }
+    double total_acc = 0;
+    for (int i=1; i<velocities.size(); i++) {
+        double acc = abs(velocities[i]-velocities[i-1]);
+        total_acc += acc;
+    }
+    printf("total acc: %f\n", total_acc);
     return {next_x_vals, next_y_vals};
 }
 

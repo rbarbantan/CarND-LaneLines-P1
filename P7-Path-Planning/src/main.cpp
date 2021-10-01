@@ -1,16 +1,14 @@
 #include <uWS/uWS.h>
 #include <fstream>
-#include <iostream>
 #include <string>
 #include <vector>
 #include "Eigen-3.3/Eigen/Core"
 #include "Eigen-3.3/Eigen/QR"
-#include "spline.h"
-#include "helpers.h"
 #include "json.hpp"
 #include "trajectory.h"
 #include "evaluate.h"
 #include "vehicle.h"
+#include "path_planner.h"
 
 // for convenience
 using nlohmann::json;
@@ -33,6 +31,7 @@ int main()
   // The max s value before wrapping around the track back to 0
   double max_s = 6945.554;
   const int MAX_PROPOSALS = 20;
+  PathPlanner planner;
   Vehicle plan = Vehicle(0, 0, 0, 0, "CS");
   int frame = 0;
   std::ifstream in_map_(map_file_.c_str(), std::ifstream::in);
@@ -57,9 +56,10 @@ int main()
     map_waypoints_dx.push_back(d_x);
     map_waypoints_dy.push_back(d_y);
   }
+  planner.setWaypoints(map_waypoints_s, map_waypoints_x, map_waypoints_y);
 
   h.onMessage([&map_waypoints_x, &map_waypoints_y, &map_waypoints_s,
-               &map_waypoints_dx, &map_waypoints_dy, &plan, &frame](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
+               &map_waypoints_dx, &map_waypoints_dy, &plan, &frame, &planner](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
                                                      uWS::OpCode opCode)
               {
                 // "42" at the start of the message means there's a websocket message event.
@@ -110,9 +110,9 @@ int main()
                       //std::cout << car_s << ", "  << car_yaw  << "," << map_waypoints_s[next_wp] <<"\n";
                       
                       car_speed = car_speed / MPS_TO_MPH;
-                      if (true) {// compute every xth frame a new plan
+                      if (frame%1 == 0) {// compute every xth frame a new plan
                         // configuration data: speed limit, num_lanes, goal_s, goal_lane, and max_acceleration
-                        vector<int> ego_config = {int(MAX_VELOCITY-1), 3, int(car_s+30), int(car_d/4), int(MAX_ACCELERATION-1)};
+                        vector<int> ego_config = {int(MAX_VELOCITY), 3, int(car_s+30), int(car_d/4), int(MAX_ACCELERATION-1)};
                         Vehicle ego = Vehicle(int(car_d/4), car_s, car_speed, 0, plan.state);
                         ego.configure(ego_config);
                         map<int, vector<Vehicle>> preds;
@@ -132,17 +132,19 @@ int main()
                         //std::cout << trajectory[0].state << ", " << trajectory[1].state << "\n";
                         //std::cout << trajectory[1].lane << ", " << trajectory[1].s << ", " << trajectory[1].v << ", ";
                         //std::cout << car_d << ", " << car_s << ", " << car_speed << "\n";
-                        
+                        if (trajectory[1].lane != plan.lane) {
+                          printf("switch from %d to %d\n", plan.lane, trajectory[1].lane);
+                        }
                         plan = trajectory[1];
                       }
-                      
-                      solution = trajectory_for_target(car_x, car_y, car_yaw, car_s, 
-                                                      previous_path_x, previous_path_y, 
-                                                      map_waypoints_s, map_waypoints_x, map_waypoints_y, 
-                                                      plan.s, plan.lane*4+2, plan.v);
+
+                      planner.updateEgo(car_x, car_y, car_yaw, car_s, car_d, car_speed, previous_path_x, previous_path_y);
+                      solution = planner.plan_trajectory(plan.s, plan.lane*4+2, plan.v);
+
+
                       frame += 1;
-                      evaluate_acceleration(solution);
-                      std::cout << "\n ============================== \n";
+                      //evaluate_acceleration(solution);
+                      //std::cout << "\n ============================== \n";
                       //double lowest_cost = 1.0;
                       //for (int i = 0; i < MAX_PROPOSALS; ++i)
                       //{

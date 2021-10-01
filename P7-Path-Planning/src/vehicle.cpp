@@ -42,15 +42,15 @@ vector<Vehicle> Vehicle::choose_next_state(map<int, vector<Vehicle>> &prediction
   for(auto state: successor_states()) {
     vector<Vehicle> trj = generate_trajectory(state, predictions);
     if (trj.size() > 0) {
-      //std::cout << state << " : ";
       float cost = calculate_cost(*this, predictions, trj);
+      //printf("%s %f, ", state.c_str(), cost);
       costs.push_back(cost);
       trajectories.push_back(trj);
     }
   }
   vector<float>::iterator best_cost = min_element(begin(costs), end(costs));
   int best_idx = distance(begin(costs), best_cost);
-  //std::cout << "best: " << best_idx;
+  //printf("best next state for %s is %d\n", this->state.c_str(), best_idx);
   return trajectories[best_idx];
 }
 
@@ -60,8 +60,20 @@ vector<string> Vehicle::successor_states() {
   //   instantaneously, so LCL and LCR can only transition back to KL.
   vector<string> states;
   states.push_back("KL");
-  /*string state = this->state;
+  string state = this->state;
   if(state.compare("KL") == 0) {
+    if (lane != lanes_available - 1) {
+      states.push_back("LCR");
+    }
+    if (lane != 0) {
+      states.push_back("LCL");
+    }
+  } else if (state.compare("LCR") == 0) {
+    states.push_back("LCR");
+  } else if (state.compare("LCL") == 0) {
+    states.push_back("LCL");
+  }
+  /*if(state.compare("KL") == 0) {
     if (lane != lanes_available - 1) {
       states.push_back("PLCR");
     }
@@ -124,7 +136,7 @@ vector<float> Vehicle::get_kinematics(map<int, vector<Vehicle>> &predictions, in
       new_velocity = std::min(std::min(max_velocity_in_front, 
                                        max_velocity_accel_limit), 
                                        this->target_speed);
-      //std::cout << "front " << new_velocity << " ";
+      //printf("lane %d, front vel: %f \n", lane, vehicle_ahead.v);
       // TODO: this is temporary, check if we keep it or we use the one above
       new_velocity = vehicle_ahead.v;
     }
@@ -197,7 +209,12 @@ vector<Vehicle> Vehicle::prep_lane_change_trajectory(string state, map<int, vect
 
 vector<Vehicle> Vehicle::lane_change_trajectory(string state, map<int, vector<Vehicle>> &predictions) {
   // Generate a lane change trajectory.
-  int new_lane = this->lane + lane_direction[state];
+  int new_lane;
+  new_lane = this->lane + lane_direction[state];
+  if (new_lane < 0 || new_lane > this->lanes_available-1) { // dont go outside road
+    new_lane = this->lane;
+  }
+  
   vector<Vehicle> trajectory;
   Vehicle next_lane_vehicle;
   // Check if a lane change is possible (check if another vehicle occupies 
@@ -257,8 +274,9 @@ bool Vehicle::get_vehicle_ahead(map<int, vector<Vehicle>> &predictions,
   for (map<int, vector<Vehicle>>::iterator it = predictions.begin(); 
        it != predictions.end(); ++it) {
     temp_vehicle = it->second[0];
-    if (temp_vehicle.lane == this->lane && temp_vehicle.s > this->s 
+    if (temp_vehicle.lane == lane && temp_vehicle.s > this->s 
         && temp_vehicle.s < min_s) {
+      //printf("found: %d, %f\n", it->first, temp_vehicle.v);
       min_s = temp_vehicle.s;
       rVehicle = temp_vehicle;
       found_vehicle = true;

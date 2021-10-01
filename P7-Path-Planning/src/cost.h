@@ -21,7 +21,7 @@ float inefficiency_cost(const Vehicle &vehicle,
                         const map<int, vector<Vehicle>> &predictions, 
                         map<string, float> &data);
 
-float acceleration_cost(const Vehicle &vehicle, 
+float exp_cost(const Vehicle &vehicle, 
                         const vector<Vehicle> &trajectory, 
                         const map<int, vector<Vehicle>> &predictions, 
                         map<string, float> &data);

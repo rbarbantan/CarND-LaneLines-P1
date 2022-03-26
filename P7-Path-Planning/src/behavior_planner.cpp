@@ -1,35 +1,45 @@
+#include <cstdio>
 #include "behavior_planner.h"
 
+void BehaviorPlanner::updateTraffic(vector<Vehicle> traffic) {
+    this->traffic = traffic;
+}
+
+void BehaviorPlanner::updateEgo(Vehicle ego, vector<double> previous_path_x, vector<double> previous_path_y, double end_path_s) {
+    this->ego = ego;
+    this->prev_size = previous_path_x.size();
+    this->end_path_s = end_path_s;
+}
+
 vector<double> BehaviorPlanner::proposeTargets() {
-       //////////////////////////////////
-    // Preventing collitions.
-    
+    double car_s = ego.s;
+    int lane = int(ego.d/4);
+    if (prev_size > 0) {
+        car_s = end_path_s;
+    }
+
     // Prediction : Analysing other cars positions.
     bool car_ahead = false;
     bool car_left = false;
     bool car_righ = false;
-    for ( int i = 0; i < sensor_fusion.size(); i++ ) {
-        float d = sensor_fusion[i][6];
+    for (auto car: traffic) {
         int car_lane = -1;
         // is it on the same lane we are
-        if ( d > 0 && d < 4 ) {
+        if ( car.d > 0 && car.d < 4 ) {
             car_lane = 0;
-        } else if ( d > 4 && d < 8 ) {
+        } else if ( car.d > 4 && car.d < 8 ) {
             car_lane = 1;
-        } else if ( d > 8 && d < 12 ) {
+        } else if ( car.d > 8 && car.d < 12 ) {
             car_lane = 2;
         }
         if (car_lane < 0) {
             continue;
         }
         // Find car speed.
-        double vx = sensor_fusion[i][3];
-        double vy = sensor_fusion[i][4];
-        double check_speed = sqrt(vx*vx + vy*vy);
-        double check_car_s = sensor_fusion[i][5];
+        double check_speed = car.velocity;
+        double check_car_s = car.s;
         // Estimate car s position after executing previous trajectory.
         check_car_s += ((double)prev_size*0.02*check_speed);
-
         if ( car_lane == lane ) {
             // Car in our lane.
             car_ahead |= check_car_s > car_s && check_car_s - car_s < 30;
@@ -66,5 +76,8 @@ vector<double> BehaviorPlanner::proposeTargets() {
         speed_diff += MAX_ACC;
         }
     }
-    return {lane, ref_vel}
+    printf("s %f d %f speed_diff %f\n", ego.s+30,  4.0*lane+2, speed_diff);
+    
+    lane = int(ego.s/100)%3;
+    return {4.0*lane+2, speed_diff};
 }

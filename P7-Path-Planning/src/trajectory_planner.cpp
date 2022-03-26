@@ -9,39 +9,33 @@ void TrajectoryPlanner::setWaypoints(vector<double> map_waypoints_s, vector<doub
     this->map_waypoints_y = map_waypoints_y;
 }
 
-void TrajectoryPlanner::updateEgo(double car_x, double car_y, double car_yaw, double car_s, double car_d, double car_speed, 
-                                    vector<double> previous_path_x, vector<double> previous_path_y) {
-    this->car_x = car_x;
-    this->car_y = car_y;
-    this->car_yaw = car_yaw;
-    this->car_s = car_s;
-    this->car_d = car_d;
-    this->car_speed = car_speed;
+void TrajectoryPlanner::updateEgo(Vehicle ego, vector<double> previous_path_x, vector<double> previous_path_y) {
+    this->ego = ego;
     this->previous_path_x = previous_path_x;
     this->previous_path_y = previous_path_y;
 }
 
-vector<vector<double>> TrajectoryPlanner::trajectory_for_target(double target_s, double target_d, double target_speed) {
+vector<vector<double>> TrajectoryPlanner::trajectory_for_target(double target_d, double target_speed) {
     int prev_size = previous_path_x.size();
 
     vector<double> ptsx;
     vector<double> ptsy;
 
-    double ref_x = car_x;
-    double ref_y = car_y;
-    double ref_yaw = deg2rad(car_yaw);
+    double ref_x = ego.x;
+    double ref_y = ego.y;
+    double ref_yaw = deg2rad(ego.yaw);
 
     // add previous predictions (to assure continuity) to high level trajectory
     if (prev_size < 2)
     {
-        double prev_car_x = car_x - cos(car_yaw);
-        double prev_car_y = car_y - sin(car_yaw);
+        double prev_car_x = ego.x - cos(ego.yaw);
+        double prev_car_y = ego.y - sin(ego.yaw);
 
         ptsx.push_back(prev_car_x);
-        ptsx.push_back(car_x);
+        ptsx.push_back(ego.x);
 
         ptsy.push_back(prev_car_y);
-        ptsy.push_back(car_y);
+        ptsy.push_back(ego.y);
     }
     else
     {
@@ -60,9 +54,9 @@ vector<vector<double>> TrajectoryPlanner::trajectory_for_target(double target_s,
     }
 
     // add next waypoints to high level trajectory
-    vector<double> next_wp0 = getXY(car_s + 30, target_d, map_waypoints_s, map_waypoints_x, map_waypoints_y);
-    vector<double> next_wp1 = getXY(car_s + 60, target_d, map_waypoints_s, map_waypoints_x, map_waypoints_y);
-    vector<double> next_wp2 = getXY(car_s + 90, target_d, map_waypoints_s, map_waypoints_x, map_waypoints_y);
+    vector<double> next_wp0 = getXY(ego.s + 30, target_d, map_waypoints_s, map_waypoints_x, map_waypoints_y);
+    vector<double> next_wp1 = getXY(ego.s + 60, target_d, map_waypoints_s, map_waypoints_x, map_waypoints_y);
+    vector<double> next_wp2 = getXY(ego.s + 90, target_d, map_waypoints_s, map_waypoints_x, map_waypoints_y);
 
     ptsx.push_back(next_wp0[0]);
     ptsx.push_back(next_wp1[0]);
@@ -95,7 +89,6 @@ vector<vector<double>> TrajectoryPlanner::trajectory_for_target(double target_s,
     }
 
     double target_x = 30;
-    //double target_x = target_s - car_s;
     double target_y = s(target_x);
     double target_dist = sqrt(target_x*target_x + target_y*target_y);
     double x_addon = 0;
@@ -103,12 +96,15 @@ vector<vector<double>> TrajectoryPlanner::trajectory_for_target(double target_s,
     printf("ref_vel %f", ref_vel);
     for (int i = 1; i <= 50 - prev_size; ++i)
     {   
-        if (ref_vel > target_speed) {
-            ref_vel = target_speed;
-        } else if (ref_vel < target_speed) {
-            ref_vel += 0.36;
+        
+        ref_vel += target_speed;
+        if ( ref_vel > 49.5 ) {
+            ref_vel = 49.5;
+        } else if ( ref_vel < .224 ) {
+            ref_vel = .224;
         }
-        double n = target_dist / (DT * ref_vel);
+
+        double n = target_dist / (DT * ref_vel/2.24);
         double x_point = x_addon + target_x / n;
         double y_point = s(x_point);
 
@@ -139,5 +135,5 @@ vector<vector<double>> TrajectoryPlanner::trajectory_for_target(double target_s,
         total_acc += acc;
     }
     printf("total acc: %f\n", total_acc);
-    return {next_x_vals, next_y_vals};
+    return {next_x_vals, next_y_vals, {ref_vel}};
 };

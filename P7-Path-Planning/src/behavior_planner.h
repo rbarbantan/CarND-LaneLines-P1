@@ -10,15 +10,16 @@ using std::vector;
 class BehaviorPlanner {
     public:
         void updateTraffic(vector<Vehicle> traffic);
-        void updateEgo(Vehicle ego, vector<double> previous_path_x, vector<double> previous_path_y, double end_path_s);
+        void updateEgo(Vehicle ego, vector<double> previous_path_x, vector<double> previous_path_y, double end_path_s, double end_path_d);
         vector<double> proposeTargets();
-        double ref_vel;
+        double ref_vel = 0;
     
     private:
         vector<Vehicle> traffic;
         Vehicle ego;
         int prev_size;
         double end_path_s;
+        double end_path_d;
 };
 
 #endif // BEHAVIOR_PLANNER_H_

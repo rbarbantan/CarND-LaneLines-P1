@@ -15,17 +15,20 @@ void TrajectoryPlanner::updateEgo(Vehicle ego, vector<double> previous_path_x, v
     this->previous_path_y = previous_path_y;
 }
 
-vector<vector<double>> TrajectoryPlanner::trajectory_for_target(double target_d, double target_speed) {
+vector<vector<double>> TrajectoryPlanner::trajectory_for_target(double target_d, double target_delta_speed) {
     int prev_size = previous_path_x.size();
 
+    // list of widely spaced (x,y) waypoints, evenly spaced at 30m
     vector<double> ptsx;
     vector<double> ptsy;
 
+    // reference states
+    // either we will reference the starting point as where the car is or at the previous path's end point
     double ref_x = ego.x;
     double ref_y = ego.y;
     double ref_yaw = deg2rad(ego.yaw);
 
-    // add previous predictions (to assure continuity) to high level trajectory
+    //if previous size is almost empty, use the car as starting reference
     if (prev_size < 2)
     {
         double prev_car_x = ego.x - cos(ego.yaw);
@@ -37,6 +40,7 @@ vector<vector<double>> TrajectoryPlanner::trajectory_for_target(double target_d,
         ptsy.push_back(prev_car_y);
         ptsy.push_back(ego.y);
     }
+    // use the previous path's endpoint as starting reference
     else
     {
         ref_x = previous_path_x[prev_size - 1];
@@ -54,7 +58,7 @@ vector<vector<double>> TrajectoryPlanner::trajectory_for_target(double target_d,
     }
 
     // add next waypoints to high level trajectory
-    vector<double> next_wp0 = getXY(ego.s + 30, target_d, map_waypoints_s, map_waypoints_x, map_waypoints_y);
+    vector<double> next_wp0 = getXY(ego.s + 45, target_d, map_waypoints_s, map_waypoints_x, map_waypoints_y);
     vector<double> next_wp1 = getXY(ego.s + 60, target_d, map_waypoints_s, map_waypoints_x, map_waypoints_y);
     vector<double> next_wp2 = getXY(ego.s + 90, target_d, map_waypoints_s, map_waypoints_x, map_waypoints_y);
 
@@ -82,7 +86,7 @@ vector<vector<double>> TrajectoryPlanner::trajectory_for_target(double target_d,
     vector<double> next_x_vals;
     vector<double> next_y_vals;
 
-    for (int i = 0; i < previous_path_x.size(); ++i)
+    for (int i = 0; i < prev_size; ++i)
     {
         next_x_vals.push_back(previous_path_x[i]);
         next_y_vals.push_back(previous_path_y[i]);
@@ -93,17 +97,16 @@ vector<vector<double>> TrajectoryPlanner::trajectory_for_target(double target_d,
     double target_dist = sqrt(target_x*target_x + target_y*target_y);
     double x_addon = 0;
 
-    printf("ref_vel %f", ref_vel);
     for (int i = 1; i <= 50 - prev_size; ++i)
     {   
         
-        ref_vel += target_speed;
+        ref_vel += target_delta_speed;
         if ( ref_vel > 49.5 ) {
             ref_vel = 49.5;
         } else if ( ref_vel < .224 ) {
             ref_vel = .224;
         }
-
+        
         double n = target_dist / (DT * ref_vel/2.24);
         double x_point = x_addon + target_x / n;
         double y_point = s(x_point);
@@ -134,6 +137,7 @@ vector<vector<double>> TrajectoryPlanner::trajectory_for_target(double target_d,
         double acc = abs(velocities[i]-velocities[i-1]);
         total_acc += acc;
     }
-    printf("total acc: %f\n", total_acc);
+    //printf("total acc: %f\n", total_acc);
+    //printf("ref_vel %f\n", ref_vel);
     return {next_x_vals, next_y_vals, {ref_vel}};
 };

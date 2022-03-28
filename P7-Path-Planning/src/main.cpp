@@ -103,14 +103,14 @@ int main()
                         double d = car[6];
                         double vx = car[3];
                         double vy = car[4];
-                        traffic.push_back(Vehicle(id, s, d, sqrt(vx * vx + vy * vy)));
+                        traffic.push_back(Vehicle(id, d, s, sqrt(vx * vx + vy * vy)));
                       }
                       Vehicle ego = Vehicle(-1, car_d, car_s, car_speed);
                       ego.x = car_x;
                       ego.y = car_y;
                       ego.yaw = car_yaw;
 
-                      planner.updateEgo(ego, previous_path_x, previous_path_y, end_path_s);
+                      planner.updateEgo(ego, previous_path_x, previous_path_y, end_path_s, end_path_d);
                       planner.updateTraffic(traffic);
                       solution = planner.plan_trajectory();
 

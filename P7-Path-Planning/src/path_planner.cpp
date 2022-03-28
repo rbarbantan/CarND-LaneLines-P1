@@ -4,8 +4,8 @@ void PathPlanner::setWaypoints(vector<double> map_waypoints_s, vector<double> ma
     trajectory_planner.setWaypoints(map_waypoints_s, map_waypoints_x, map_waypoints_y);
 }
 
-void PathPlanner::updateEgo(Vehicle ego, vector<double> previous_path_x, vector<double> previous_path_y, double end_path_s) {
-    behavior_planner.updateEgo(ego, previous_path_x, previous_path_y, end_path_s);
+void PathPlanner::updateEgo(Vehicle ego, vector<double> previous_path_x, vector<double> previous_path_y, double end_path_s, double end_path_d) {
+    behavior_planner.updateEgo(ego, previous_path_x, previous_path_y, end_path_s, end_path_d);
     trajectory_planner.updateEgo(ego, previous_path_x, previous_path_y);
 }
 

@@ -8,7 +8,7 @@ using std::vector;
 
 class TrajectoryPlanner {
     public:
-        vector<vector<double>> trajectory_for_target(double target_d, double target_speed);
+        vector<vector<double>> trajectory_for_target(Goal goal);
         void setWaypoints(vector<double> map_waypoints_s, vector<double> map_waypoints_x, vector<double> map_waypoints_y);
         void updateEgo(Vehicle ego, vector<double> previous_path_x, vector<double> previous_path_y);
         double ref_vel = 0;

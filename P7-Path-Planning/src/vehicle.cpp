@@ -11,3 +11,10 @@ Vehicle::Vehicle(int id, double d, double s, double velocity) {
     this->velocity = velocity;
 }
 Vehicle::~Vehicle() {}
+
+Goal::Goal(int lane, double delta_velocity) {
+    this->lane = lane;
+    this->delta_velocity = delta_velocity;
+}
+
+Goal::~Goal() {}

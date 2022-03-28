@@ -15,7 +15,7 @@ void TrajectoryPlanner::updateEgo(Vehicle ego, vector<double> previous_path_x, v
     this->previous_path_y = previous_path_y;
 }
 
-vector<vector<double>> TrajectoryPlanner::trajectory_for_target(double target_d, double target_delta_speed) {
+vector<vector<double>> TrajectoryPlanner::trajectory_for_target(Goal goal) {
     int prev_size = previous_path_x.size();
 
     // list of widely spaced (x,y) waypoints, evenly spaced at 30m
@@ -58,9 +58,9 @@ vector<vector<double>> TrajectoryPlanner::trajectory_for_target(double target_d,
     }
 
     // add next waypoints to high level trajectory
-    vector<double> next_wp0 = getXY(ego.s + 45, target_d, map_waypoints_s, map_waypoints_x, map_waypoints_y);
-    vector<double> next_wp1 = getXY(ego.s + 60, target_d, map_waypoints_s, map_waypoints_x, map_waypoints_y);
-    vector<double> next_wp2 = getXY(ego.s + 90, target_d, map_waypoints_s, map_waypoints_x, map_waypoints_y);
+    vector<double> next_wp0 = getXY(ego.s + 45, 2 + 4*goal.lane, map_waypoints_s, map_waypoints_x, map_waypoints_y);
+    vector<double> next_wp1 = getXY(ego.s + 60, 2 + 4*goal.lane, map_waypoints_s, map_waypoints_x, map_waypoints_y);
+    vector<double> next_wp2 = getXY(ego.s + 90, 2 + 4*goal.lane, map_waypoints_s, map_waypoints_x, map_waypoints_y);
 
     ptsx.push_back(next_wp0[0]);
     ptsx.push_back(next_wp1[0]);
@@ -100,7 +100,7 @@ vector<vector<double>> TrajectoryPlanner::trajectory_for_target(double target_d,
     for (int i = 1; i <= 50 - prev_size; ++i)
     {   
         
-        ref_vel += target_delta_speed;
+        ref_vel += goal.delta_velocity;
         if ( ref_vel > 49.5 ) {
             ref_vel = 49.5;
         } else if ( ref_vel < .224 ) {

@@ -11,4 +11,14 @@ class Vehicle {
     double d, s, velocity, x, y, yaw;
     
 };
+
+class Goal {
+  public:
+    Goal(int lane, double delta_velocity);
+    ~Goal();
+
+    int lane;
+    double delta_velocity;
+
+};
 #endif  // VEHICLE_H_

@@ -138,7 +138,5 @@ vector<vector<double>> TrajectoryPlanner::trajectory_for_target(Goal goal) {
         double acc = abs(velocities[i]-velocities[i-1]);
         total_acc += acc;
     }
-    //printf("total acc: %f\n", total_acc);
-    //printf("ref_vel %f\n", ref_vel);
     return {next_x_vals, next_y_vals, {ref_vel}};
 };

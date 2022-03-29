@@ -16,6 +16,5 @@ void PathPlanner::updateTraffic(vector<Vehicle> traffic) {
 vector<vector<double>> PathPlanner::plan_trajectory() {
     Goal goal = behavior_planner.proposeTargets();
     vector<vector<double>> trajectory = trajectory_planner.trajectory_for_target(goal);
-    behavior_planner.ref_vel = trajectory_planner.ref_vel;
     return trajectory;
 }

@@ -28,7 +28,6 @@ int main()
   // The max s value before wrapping around the track back to 0
   double max_s = 6945.554;
   PathPlanner planner;
-  int frame = 0;
   std::ifstream in_map_(map_file_.c_str(), std::ifstream::in);
 
   string line;
@@ -53,7 +52,7 @@ int main()
   }
   planner.setWaypoints(map_waypoints_s, map_waypoints_x, map_waypoints_y);
 
-  h.onMessage([&planner, &frame](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode)
+  h.onMessage([&planner](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode)
               {
                 // "42" at the start of the message means there's a websocket message event.
                 // The 4 signifies a websocket message
@@ -113,8 +112,6 @@ int main()
                       planner.updateEgo(ego, previous_path_x, previous_path_y, end_path_s, end_path_d);
                       planner.updateTraffic(traffic);
                       solution = planner.plan_trajectory();
-
-                      frame += 1;
 
                       msgJson["next_x"] = solution[0];
                       msgJson["next_y"] = solution[1];

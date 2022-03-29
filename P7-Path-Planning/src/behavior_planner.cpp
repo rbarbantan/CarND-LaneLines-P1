@@ -1,6 +1,7 @@
 #include <cstdio>
 #include <cmath>
 #include "behavior_planner.h"
+#include "constants.h"
 
 void BehaviorPlanner::updateTraffic(vector<Vehicle> traffic) {
     this->traffic = traffic;
@@ -14,7 +15,7 @@ void BehaviorPlanner::updateEgo(Vehicle ego, vector<double> previous_path_x, vec
 }
 
 Goal BehaviorPlanner::proposeTargets() {
-    const double delta = 0.224;
+    
     double ego_s = ego.s;
     double ego_d = ego.d;
 
@@ -23,18 +24,18 @@ Goal BehaviorPlanner::proposeTargets() {
         //ego_d = end_path_d;
     }
     
-    int ego_lane = int(ego_d/4);
+    int ego_lane = int(ego_d / LANE_WIDTH);
 
     // default behavior: go as fast as possible in current lane
-    double target_delta_velocity = delta;
+    double target_delta_velocity = VEL_INCREMENT;
     int target_lane = ego_lane;
 
     for (auto car: traffic) {
-        int car_lane = int(car.d/4);
+        int car_lane = int(car.d / LANE_WIDTH);
         if (ego_lane == car_lane) {
             // Estimate car s position after executing previous trajectory.
-            double predicted_s = car.s + ((double)prev_size*0.02*car.velocity);
-            if (predicted_s > ego_s  && (predicted_s - ego_s < 30)) { // ahead and too close
+            double predicted_s = car.s + ((double)prev_size * DT * car.velocity);
+            if (predicted_s > ego_s  && (predicted_s - ego_s < LOOK_AHEAD)) { // ahead and too close
                 if (isLaneChangeValid(ego_lane, ego_s, ego_lane-1, prev_size, traffic)) { // left lane change
                     //printf("left\n");
                     target_lane = ego_lane - 1;
@@ -42,7 +43,7 @@ Goal BehaviorPlanner::proposeTargets() {
                     //printf("right\n");
                     target_lane = ego_lane + 1;
                 } else {
-                    target_delta_velocity = -delta;
+                    target_delta_velocity = -VEL_INCREMENT;
                 }
                 break;
             }
@@ -56,10 +57,10 @@ Goal BehaviorPlanner::proposeTargets() {
 bool BehaviorPlanner::isLaneEmpty(int lane, double s, int time_step, vector<Vehicle> traffic) {
     bool empty = true;
     for (auto car: traffic) {
-        int car_lane = int(car.d/4);
+        int car_lane = int(car.d / LANE_WIDTH);
         if (car_lane == lane) {
-            double predicted_s = car.s + ((double)time_step*0.02*car.velocity);
-            if ((s-10 < predicted_s) && (predicted_s < s+30)) { 
+            double predicted_s = car.s + ((double)time_step * DT * car.velocity);
+            if ((s-LOOK_BEHIND < predicted_s) && (predicted_s < s+LOOK_AHEAD)) { 
                 empty = false;
                 break;
             }
@@ -69,7 +70,7 @@ bool BehaviorPlanner::isLaneEmpty(int lane, double s, int time_step, vector<Vehi
 }
 
 bool BehaviorPlanner::isLaneChangeValid(int source_lane, double source_s, int target_lane, int time_step, vector<Vehicle> traffic){
-    bool legal = (0 <= target_lane) && (target_lane <= 2) && ((source_lane > 0 && target_lane > 0) || (source_lane < 2 && target_lane < 2));
+    bool legal = (MIN_LANE <= target_lane) && (target_lane <= MAX_LANE) && ((source_lane > MIN_LANE && target_lane > MIN_LANE) || (source_lane < MAX_LANE && target_lane < MAX_LANE));
     //printf("%d %d %d\n", source_lane, target_lane, legal);
     return legal && isLaneEmpty(target_lane, source_s, time_step, traffic);
 }

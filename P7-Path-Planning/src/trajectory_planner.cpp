@@ -2,6 +2,7 @@
 #include "spline.h"
 #include "helpers.h"
 #include "trajectory_planner.h"
+#include "constants.h"
 
 void TrajectoryPlanner::setWaypoints(vector<double> map_waypoints_s, vector<double> map_waypoints_x, vector<double> map_waypoints_y) {
     this->map_waypoints_s = map_waypoints_s;
@@ -58,9 +59,9 @@ vector<vector<double>> TrajectoryPlanner::trajectory_for_target(Goal goal) {
     }
 
     // add next waypoints to high level trajectory
-    vector<double> next_wp0 = getXY(ego.s + 45, 2 + 4*goal.lane, map_waypoints_s, map_waypoints_x, map_waypoints_y);
-    vector<double> next_wp1 = getXY(ego.s + 60, 2 + 4*goal.lane, map_waypoints_s, map_waypoints_x, map_waypoints_y);
-    vector<double> next_wp2 = getXY(ego.s + 90, 2 + 4*goal.lane, map_waypoints_s, map_waypoints_x, map_waypoints_y);
+    vector<double> next_wp0 = getXY(ego.s + WP0, LANE_WIDTH/2 + LANE_WIDTH*goal.lane, map_waypoints_s, map_waypoints_x, map_waypoints_y);
+    vector<double> next_wp1 = getXY(ego.s + WP1, LANE_WIDTH/2 + LANE_WIDTH*goal.lane, map_waypoints_s, map_waypoints_x, map_waypoints_y);
+    vector<double> next_wp2 = getXY(ego.s + WP2, LANE_WIDTH/2 + LANE_WIDTH*goal.lane, map_waypoints_s, map_waypoints_x, map_waypoints_y);
 
     ptsx.push_back(next_wp0[0]);
     ptsx.push_back(next_wp1[0]);
@@ -92,22 +93,22 @@ vector<vector<double>> TrajectoryPlanner::trajectory_for_target(Goal goal) {
         next_y_vals.push_back(previous_path_y[i]);
     }
 
-    double target_x = 30;
+    double target_x = SPLINE_TARGET;
     double target_y = s(target_x);
     double target_dist = sqrt(target_x*target_x + target_y*target_y);
     double x_addon = 0;
 
-    for (int i = 1; i <= 50 - prev_size; ++i)
+    for (int i = 1; i <= TRAJ_SIZE - prev_size; ++i)
     {   
         
         ref_vel += goal.delta_velocity;
-        if ( ref_vel > 49.5 ) {
-            ref_vel = 49.5;
-        } else if ( ref_vel < .224 ) {
-            ref_vel = .224;
+        if ( ref_vel > MAX_VELOCITY ) {
+            ref_vel = MAX_VELOCITY;
+        } else if ( ref_vel < VEL_INCREMENT ) {
+            ref_vel = VEL_INCREMENT;
         }
         
-        double n = target_dist / (DT * ref_vel/2.24);
+        double n = target_dist / (DT * ref_vel/MPS_TO_MPH);
         double x_point = x_addon + target_x / n;
         double y_point = s(x_point);
 

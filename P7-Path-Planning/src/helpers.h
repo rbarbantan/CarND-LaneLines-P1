@@ -12,10 +12,6 @@ using Eigen::MatrixXd;
 using std::string;
 using std::vector;
 
-const double MAX_VELOCITY = 22.0; // m/s
-const double DT = 0.02; // s
-const double MPS_TO_MPH = 2.24;
-
 // Checks if the SocketIO event has JSON data.
 // If there is data the JSON object in string format will be returned,
 //   else the empty string "" will be returned.

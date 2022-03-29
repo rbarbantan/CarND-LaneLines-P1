@@ -15,3 +15,6 @@ This repository is a collection of my submissions required for this nanodegree.
 [P5 - Extended Kalman Filter](P5-Extended-Kalman-Filter)
 
 [P6 - Kidnapped Vehicle](P6-Kidnapped-Vehicle)
+
+[P7 - Path Planning](P7-Path-Planning)
+

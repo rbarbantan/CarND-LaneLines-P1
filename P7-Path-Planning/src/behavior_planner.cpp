@@ -28,7 +28,7 @@ Goal BehaviorPlanner::proposeTargets() {
     int ego_lane = int(ego_d / LANE_WIDTH);
     
     // default behavior: go as fast as possible in current lane
-    double target_delta_velocity = VEL_INCREMENT;
+    double target_delta_velocity = 0;
     int target_lane = ego_lane;
 
     bool too_close = false;
@@ -64,9 +64,10 @@ Goal BehaviorPlanner::proposeTargets() {
                 // swithc back to middle lane
                 target_lane = mid_lane;
             }
+        } else {
+            // traffic clear so speed up
+            target_delta_velocity = VEL_INCREMENT;
         }
-        // traffic clear so speed up
-        target_delta_velocity = VEL_INCREMENT;
     }
     
     Goal goal = Goal(target_lane, target_delta_velocity);

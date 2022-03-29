@@ -1,145 +1,150 @@
-# CarND-Path-Planning-Project
+# **CarND-Path-Planning-Project**
 Self-Driving Car Engineer Nanodegree Program
    
-### Simulator.
-You can download the Term3 Simulator which contains the Path Planning Project from the [releases tab (https://github.com/udacity/self-driving-car-sim/releases/tag/T3_v1.2).  
+## Project scope
+The goal for this project is to safely navigate around a virtual highway with other traffic that is driving +-10 MPH of the 50 MPH speed limit. We are provided the car's localization and sensor fusion data, there is also a sparse map list of waypoints around the highway. The car should try to go as close as possible to the 50 MPH speed limit, which means passing slower traffic when possible, note that other cars will try to change lanes too. The car should avoid hitting other cars at all cost as well as driving inside of the marked road lanes at all times, unless going from one lane to another. The car should be able to make one complete loop around the 6946m highway. Since the car is trying to go 50 MPH, it should take a little over 5 minutes to complete 1 loop. Also the car should not experience total acceleration over 10 m/s^2 and jerk that is greater than 10 m/s^3.
 
-To run the simulator on Mac/Linux, first make the binary file executable with the following command:
-```shell
-sudo chmod u+x {simulator_file_name}
+For more details on the setup and constraints, see the [original instructions](instructions.md)
+
+
+## Writeup / README
+I tried to follow the architecture suggested in the lecture and organized my code in three separate modules:
+
+### Path Planner
+Represents the [planner](src/path_planner.cpp) itself, in order to keep the code separate from the [utility code](src/main.cpp) provided to communicate with the simulation. 
+It is a wrapper for the other two modules: a **behavior planner** and **trajectory planner**.
+```
+vector<vector<double>> PathPlanner::plan_trajectory() {
+    Goal goal = behavior_planner.proposeTargets();
+    vector<vector<double>> trajectory = trajectory_planner.trajectory_for_target(goal);
+    return trajectory;
+}
 ```
 
-### Goals
-In this project your goal is to safely navigate around a virtual highway with other traffic that is driving +-10 MPH of the 50 MPH speed limit. You will be provided the car's localization and sensor fusion data, there is also a sparse map list of waypoints around the highway. The car should try to go as close as possible to the 50 MPH speed limit, which means passing slower traffic when possible, note that other cars will try to change lanes too. The car should avoid hitting other cars at all cost as well as driving inside of the marked road lanes at all times, unless going from one lane to another. The car should be able to make one complete loop around the 6946m highway. Since the car is trying to go 50 MPH, it should take a little over 5 minutes to complete 1 loop. Also the car should not experience total acceleration over 10 m/s^2 and jerk that is greater than 10 m/s^3.
+I originally invetigated the use of a *prediction* module as well, but I decided to use a very simple physical-based model, so the prediction of other participants in traffic is included in the behavior planner.
 
-#### The map of the highway is in data/highway_map.txt
-Each waypoint in the list contains  [x,y,s,dx,dy] values. x and y are the waypoint's map coordinate position, the s value is the distance along the road to get to that waypoint in meters, the dx and dy values define the unit normal vector pointing outward of the highway loop.
+### Behavior Planner
+This [module](src/behavior_planner.cpp) deals with the high-level logic of the ego car. It analyzes the traffic around the ego car and predicts their motion.
+```
+for (auto car: traffic) {
+        int car_lane = int(car.d / LANE_WIDTH);
+        // Estimate car s position after executing previous trajectory.
+        double predicted_s = car.s + ((double)prev_size * DT * car.velocity);
+```
+Then it applies a very simple state machine logic, heavily inspired from the discussion in the knowledgebase. 
 
-The highway's waypoints loop around so the frenet s value, distance along the road, goes from 0 to 6945.554.
+It checks for traffic ahead and in the adjacent lanes, and picks the an empty lane, always preferring the middle one, and going as fast as legally possible.
+If there is traffic ahead, the car slows down. The pseudo code looks something like:
+```
+  for car in traffic:
+    check if car is too close ahead
+    check if car is near ego to the left (+- given distance)
+    check if car is near rgo to the left (+- given distance)
+  
+  if car ahead:
+    if left lane is free:
+      go left
+    else if right lane is free:
+      go right
+    else:
+      slow down
+  else:
+    if not in middle lane:
+      go to middle
+    else:
+      accelerate
+```
+The output of the behavior module is the desired [goal](src/vehicle.h#15): an `intended lane`, and `desired action`: *accelerate* or *decelerate*
 
-## Basic Build Instructions
+### Trajectory Planner
+Given the current status of the ego car and the goal given by the behavior planner, the role of the trajectory planner is to [compute a valid trajectory](src/trajectory_planner.cpp#19).
 
-1. Clone this repo.
-2. Make a build directory: `mkdir build && cd build`
-3. Compile: `cmake .. && make`
-4. Run it: `./path_planning`.
+By valid, I mean a list of 50 x,y coordinates to be executed by the simulator, each point being 0.02 seconds apart. This trajectory needs to respect all the imposed constraints like maximum allowed velocity, acceleration, jerk, etc. 
+For the final solution, I have used the spline approach and library suggested in the `Project Q&A Session`.
 
-Here is the data provided from the Simulator to the C++ Program
+I construct a high-level trajectory based on the last 2 points from the old trajectory (for continuity) 
+```
+ref_x = previous_path_x[prev_size - 1];
+ref_y = previous_path_y[prev_size - 1];
+...
+ptsx.push_back(ref_x_prev);
+ptsx.push_back(ref_x);
 
-#### Main car's localization Data (No Noise)
+ptsy.push_back(ref_y_prev);
+ptsy.push_back(ref_y);
 
-["x"] The car's x position in map coordinates
+```
+and 3 points in the future, based on the lane proposed by the behavior planner. Here is an example for first way point WP0:
+```
+vector<double> next_wp0 = getXY(ego.s + WP0, LANE_WIDTH/2 + LANE_WIDTH*goal.lane, map_waypoints_s, map_waypoints_x, map_waypoints_y);
 
-["y"] The car's y position in map coordinates
+...
+ptsx.push_back(next_wp0[0]);
+ptsy.push_back(next_wp0[1]);
+...
+```
+These points are converted in the ego car's frame of reference (for easier calculations) and a spline is fitted.
+```
+// compute a spline from proposed high level trajectory
+tk::spline s;
+s.set_points(ptsx, ptsy);
+```
+The final trajectory consists of the old trajectory not yet executed by the simulated controller, plus some new points computed using the spline we just computed. 
+```
+for (int i = 0; i < prev_size; ++i)
+    {
+        next_x_vals.push_back(previous_path_x[i]);
+        next_y_vals.push_back(previous_path_y[i]);
+    }
+```
+For these last points the same trick used by the instructor is applied. I compute a set of x points for which I get the corresponding y, based on the spline and taking into account the action (accelerate/decelerate) suggested by the behavior planner.
+```
+    for (int i = 1; i <= TRAJ_SIZE - prev_size; ++i)
+    {   
+        
+        ref_vel += goal.delta_velocity;
+        if ( ref_vel > MAX_VELOCITY ) {
+            ref_vel = MAX_VELOCITY;
+        } else if ( ref_vel < VEL_INCREMENT ) {
+            ref_vel = VEL_INCREMENT;
+        }
+        
+        double n = target_dist / (DT * ref_vel/MPS_TO_MPH);
+        double x_point = x_addon + target_x / n;
+        double y_point = s(x_point);
 
-["s"] The car's s position in frenet coordinates
+        x_addon = x_point;
 
-["d"] The car's d position in frenet coordinates
+        double x_ref = x_point;
+        double y_ref = y_point;
 
-["yaw"] The car's yaw angle in the map
+        // rotate back
+        x_point = x_ref * cos(ref_yaw) - y_ref * sin(ref_yaw);
+        y_point = x_ref * sin(ref_yaw) + y_ref * cos(ref_yaw);
 
-["speed"] The car's speed in MPH
+        x_point += ref_x;
+        y_point += ref_y;
 
-#### Previous path data given to the Planner
+        next_x_vals.push_back(x_point);
+        next_y_vals.push_back(y_point);
+    }
+```
+Since I wanted to act as fast as possible based on the desired behavior, I apply acceleration/deceleration on each node, so this is where I also limit the velocity to it's legal boundaries.
 
-//Note: Return the previous list but with processed points removed, can be a nice tool to show how far along
-the path has processed since last time. 
+In the end, the entire trajectory is converted back into world coordinates and sent to the simulation.
 
-["previous_path_x"] The previous list of x points previously given to the simulator
+### Other approaches
+Initially I intended to use a diffrent approach both for the behavior and the trajectory planner (closer to the theory presented in the course as opposed to the Q&A session), but this proved to be more challenging than expected. 
 
-["previous_path_y"] The previous list of y points previously given to the simulator
+One possible approach would be for the trajectories to be generated using a quintic polynomial solver, but in practice it was difficult to make a smooth transition from one proposed trajectory to another using this approach. One obviously needs to incude trajectory history into the equation, but doing so with just the stat/end states proved challenging.
 
-#### Previous path's end s and d values 
+Once the trajectory generation is stable and flexible enough, it could be used to generate a set of possible candidate with different possible targets: different lanes, different timings, etc. I also implemented soome basic cost evaluation functions, but in practice they also proved difficult to tune the weights properly.
 
-["end_path_s"] The previous list's last point's frenet s value
+In the end, due to time constraints I chose to revert to a simple state machine similar to the one suggested by mentors in the knowledge section.
 
-["end_path_d"] The previous list's last point's frenet d value
+### Possible improvements
+The most obvious improvement to this project would include re-attempting to implement the failed attempts. With more debugging and better logging an efficient trajectory cost evaluation function is possible and would cover a lot more scenarios than the ones covered by the state machine.
 
-#### Sensor Fusion Data, a list of all other car's attributes on the same side of the road. (No Noise)
+Even better, the "weights" of the various cost functions could be learned by using reinforcement learning or perhaps supervised imitation learning.
 
-["sensor_fusion"] A 2d vector of cars and then that car's [car's unique ID, car's x position in map coordinates, car's y position in map coordinates, car's x velocity in m/s, car's y velocity in m/s, car's s position in frenet coordinates, car's d position in frenet coordinates. 
-
-## Details
-
-1. The car uses a perfect controller and will visit every (x,y) point it recieves in the list every .02 seconds. The units for the (x,y) points are in meters and the spacing of the points determines the speed of the car. The vector going from a point to the next point in the list dictates the angle of the car. Acceleration both in the tangential and normal directions is measured along with the jerk, the rate of change of total Acceleration. The (x,y) point paths that the planner recieves should not have a total acceleration that goes over 10 m/s^2, also the jerk should not go over 50 m/s^3. (NOTE: As this is BETA, these requirements might change. Also currently jerk is over a .02 second interval, it would probably be better to average total acceleration over 1 second and measure jerk from that.
-
-2. There will be some latency between the simulator running and the path planner returning a path, with optimized code usually its not very long maybe just 1-3 time steps. During this delay the simulator will continue using points that it was last given, because of this its a good idea to store the last points you have used so you can have a smooth transition. previous_path_x, and previous_path_y can be helpful for this transition since they show the last points given to the simulator controller with the processed points already removed. You would either return a path that extends this previous path or make sure to create a new path that has a smooth transition with this last path.
-
-## Tips
-
-A really helpful resource for doing this project and creating smooth trajectories was using http://kluge.in-chemnitz.de/opensource/spline/, the spline function is in a single hearder file is really easy to use.
-
----
-
-## Dependencies
-
-* cmake >= 3.5
-  * All OSes: [click here for installation instructions](https://cmake.org/install/)
-* make >= 4.1
-  * Linux: make is installed by default on most Linux distros
-  * Mac: [install Xcode command line tools to get make](https://developer.apple.com/xcode/features/)
-  * Windows: [Click here for installation instructions](http://gnuwin32.sourceforge.net/packages/make.htm)
-* gcc/g++ >= 5.4
-  * Linux: gcc / g++ is installed by default on most Linux distros
-  * Mac: same deal as make - [install Xcode command line tools]((https://developer.apple.com/xcode/features/)
-  * Windows: recommend using [MinGW](http://www.mingw.org/)
-* [uWebSockets](https://github.com/uWebSockets/uWebSockets)
-  * Run either `install-mac.sh` or `install-ubuntu.sh`.
-  * If you install from source, checkout to commit `e94b6e1`, i.e.
-    ```
-    git clone https://github.com/uWebSockets/uWebSockets 
-    cd uWebSockets
-    git checkout e94b6e1
-    ```
-
-## Editor Settings
-
-We've purposefully kept editor configuration files out of this repo in order to
-keep it as simple and environment agnostic as possible. However, we recommend
-using the following settings:
-
-* indent using spaces
-* set tab width to 2 spaces (keeps the matrices in source code aligned)
-
-## Code Style
-
-Please (do your best to) stick to [Google's C++ style guide](https://google.github.io/styleguide/cppguide.html).
-
-## Project Instructions and Rubric
-
-Note: regardless of the changes you make, your project must be buildable using
-cmake and make!
-
-
-## Call for IDE Profiles Pull Requests
-
-Help your fellow students!
-
-We decided to create Makefiles with cmake to keep this project as platform
-agnostic as possible. Similarly, we omitted IDE profiles in order to ensure
-that students don't feel pressured to use one IDE or another.
-
-However! I'd love to help people get up and running with their IDEs of choice.
-If you've created a profile for an IDE that you think other students would
-appreciate, we'd love to have you add the requisite profile files and
-instructions to ide_profiles/. For example if you wanted to add a VS Code
-profile, you'd add:
-
-* /ide_profiles/vscode/.vscode
-* /ide_profiles/vscode/README.md
-
-The README should explain what the profile does, how to take advantage of it,
-and how to install it.
-
-Frankly, I've never been involved in a project with multiple IDE profiles
-before. I believe the best way to handle this would be to keep them out of the
-repo root to avoid clutter. My expectation is that most profiles will include
-instructions to copy files to a new location to get picked up by the IDE, but
-that's just a guess.
-
-One last note here: regardless of the IDE used, every submitted project must
-still be compilable with cmake and make./
-
-## How to write a README
-A well written README file can enhance your project and portfolio.  Develop your abilities to create professional README files by completing [this free course](https://www.udacity.com/course/writing-readmes--ud777).
-
+In a similar way, predicting the behavior of other participants in traffic could use a more complex model or a neural network model trained on a [dataset like this](https://level-5.global/data/prediction/), using supervised or unsupervised learning.

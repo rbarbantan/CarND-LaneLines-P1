@@ -5,8 +5,8 @@ const int MIN_LANE = 0;
 const int MAX_LANE = 2;
 const int LANE_WIDTH = 4;
 
-const double LOOK_AHEAD = 20;
-const double LOOK_BEHIND = 5;
+const double LOOK_AHEAD = 30;
+const double LOOK_BEHIND = 30;
 const double DT = 0.02;
 const double VEL_INCREMENT = 0.224;
 

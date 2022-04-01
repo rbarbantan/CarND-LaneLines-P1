@@ -59,11 +59,9 @@ Goal BehaviorPlanner::proposeTargets() {
         }
     } else {
         int mid_lane = int((MAX_LANE-MIN_LANE)/2);
-        if (target_lane != mid_lane) { 
-            if ((target_lane == MAX_LANE && !car_to_left) || (target_lane == MIN_LANE && !car_to_right)) {
-                // swithc back to middle lane
-                target_lane = mid_lane;
-            }
+        if ((target_lane != mid_lane) && ((target_lane == MAX_LANE && !car_to_left) || (target_lane == MIN_LANE && !car_to_right))) {
+            // switch back to middle lane
+            target_lane = mid_lane;
         } else {
             // traffic clear so speed up
             target_delta_velocity = VEL_INCREMENT;

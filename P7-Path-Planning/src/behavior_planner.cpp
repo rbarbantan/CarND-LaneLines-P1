@@ -50,22 +50,23 @@ Goal BehaviorPlanner::proposeTargets() {
     }
 
     if (too_close) {
-        if (!car_to_right && target_lane < MAX_LANE) {  // switch to right lane
-            target_lane += 1;
-        } else if (!car_to_left && target_lane > MIN_LANE) { // switch to left lane
+        if (!car_to_left && target_lane > MIN_LANE) { // switch to left lane
             target_lane -= 1;
+        } else if (!car_to_right && target_lane < MAX_LANE) {  // switch to right lane
+            target_lane += 1;
         } else { // slow down
             target_delta_velocity = -VEL_INCREMENT;
         }
     } else {
         int mid_lane = int((MAX_LANE-MIN_LANE)/2);
-        if ((target_lane != mid_lane) && ((target_lane == MAX_LANE && !car_to_left) || (target_lane == MIN_LANE && !car_to_right))) {
-            // switch back to middle lane
-            target_lane = mid_lane;
-        } else {
-            // traffic clear so speed up
-            target_delta_velocity = VEL_INCREMENT;
+        if (target_lane != mid_lane) { 
+            if ((target_lane == MAX_LANE && !car_to_left) || (target_lane == MIN_LANE && !car_to_right)) {
+                // switch back to middle lane
+                target_lane = mid_lane;
+            }
         }
+        // traffic clear so speed up
+        target_delta_velocity = VEL_INCREMENT;
     }
     
     Goal goal = Goal(target_lane, target_delta_velocity);

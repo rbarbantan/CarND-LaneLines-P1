@@ -98,15 +98,15 @@ vector<vector<double>> TrajectoryPlanner::trajectory_for_target(Goal goal) {
     double target_dist = sqrt(target_x*target_x + target_y*target_y);
     double x_addon = 0;
 
+    ref_vel += goal.delta_velocity;
+    if ( ref_vel > MAX_VELOCITY ) {
+        ref_vel = MAX_VELOCITY;
+    } else if ( ref_vel < VEL_INCREMENT ) {
+        ref_vel = VEL_INCREMENT;
+    }
+
     for (int i = 1; i <= TRAJ_SIZE - prev_size; ++i)
     {   
-        
-        ref_vel += goal.delta_velocity;
-        if ( ref_vel > MAX_VELOCITY ) {
-            ref_vel = MAX_VELOCITY;
-        } else if ( ref_vel < VEL_INCREMENT ) {
-            ref_vel = VEL_INCREMENT;
-        }
         
         double n = target_dist / (DT * ref_vel/MPS_TO_MPH);
         double x_point = x_addon + target_x / n;

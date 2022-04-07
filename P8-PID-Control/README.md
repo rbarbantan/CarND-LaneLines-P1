@@ -64,9 +64,9 @@ This means we need to split the twiddle algorithm in three states, which corresp
 class Twiddle {
     enum State {
         INIT,
-		FIRST_CHECK,
-		SECOND_CHECK
-	};
+        FIRST_CHECK,
+        SECOND_CHECK
+    };
 ```
 We run the simulation with a given configuration of PID parameters (until a maximum number of steps is executed, we go off road, or get stuck)
 ```C++
@@ -94,7 +94,7 @@ Initializing the twiddle algorithm with `0.0, 0.0, 0.0` for the parameters and `
 
 ![calibration](img/calibration.png)
 
-For this, I created a new [calibration](src/calibrate.cpp) target, which found a solution for `0.477, 0.0, 4.31`. These values I then hard-coded in the [main](src/calibrate.cpp#L40) script and managed to complete a full round-trip on the track.
+For this, I created a new [calibration](src/calibrate.cpp) target, which found a solution for `0.477, 0.0, 4.31`. These values I then hard-coded in the [main](src/main.cpp#L40) script and managed to complete a full round-trip on the track.
 
 For the throttle, I decided that instead of continuously accelerating, to try [another PID controller](src/main.cpp#L43) which would keep a constant 25 MPH speed. Since I am not interested in the accuracy of the longitudinal control that much, a simple `1, 0, 0` seemed to do the job.
 

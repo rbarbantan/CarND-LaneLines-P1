@@ -18,3 +18,5 @@ This repository is a collection of my submissions required for this nanodegree.
 
 [P7 - Path Planning](P7-Path-Planning)
 
+[P8 - PID Control](P8-PID-Control)
+

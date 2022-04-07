@@ -30,6 +30,7 @@ class Twiddle {
         int iteration = 0;
         double best_err = -1;
         vector<double> best_params;
+        void Increment();
 };
 
 #endif // TWIDDLE_H

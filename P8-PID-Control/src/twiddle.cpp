@@ -32,7 +32,6 @@ void Twiddle::Update(double err) {
     {
     case INIT:
         best_err = err;
-        //std::cout << "new best: " << best_err << std::endl;
         best_params.assign(p.begin(), p.end());
         p[idx] += dp[idx];
         state = FIRST_CHECK;
@@ -40,16 +39,10 @@ void Twiddle::Update(double err) {
     case FIRST_CHECK:
         if (err < best_err) {
             best_err = err;
-            //std::cout << "new best: " << best_err << std::endl;
             best_params.assign(p.begin(), p.end());
             dp[idx] *= 1.1;
             idx += 1;
-            if (idx > 2) {
-                idx = 0;
-                std::cout <<iteration << " - best_err: " << best_err << ", dp: " << std::accumulate(dp.begin(), dp.end(), 0.0) << std::endl;
-                iteration += 1;
-            }
-
+            Increment();
             p[idx] += dp[idx];
             state = FIRST_CHECK;
         } else {
@@ -68,11 +61,7 @@ void Twiddle::Update(double err) {
             dp[idx] *= 0.9;
         }
         idx += 1;
-        if (idx > 2) {
-            idx = 0;
-            std::cout <<iteration << " - best_err: " << best_err << ", dp: " << std::accumulate(dp.begin(), dp.end(), 0.0) << std::endl;
-            iteration += 1;
-        }
+        Increment();
         p[idx] += dp[idx];
         state = FIRST_CHECK;
         break;
@@ -80,4 +69,12 @@ void Twiddle::Update(double err) {
         break;
     }
     //std::cout << "out state: " << state << std::endl;
+}
+
+void Twiddle::Increment() {
+    if (idx > 2) {
+        idx = 0;
+        std::cout <<iteration << " - best_err: " << best_err << ", dp: " << std::accumulate(dp.begin(), dp.end(), 0.0) << std::endl;
+        iteration += 1;
+    }
 }

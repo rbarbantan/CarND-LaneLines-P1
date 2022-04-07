@@ -78,20 +78,18 @@ int main() {
 
           if (frame >= MAX_FRAMES || (frame > 10 && std::abs(cte) > 6) || (frame > 100 && speed < 1)) {
             if (!twiddle.IsDone()) {
-              //double err = lat_pid.TotalError();
               double err = MAX_FRAMES - frame + total_cte/frame;
-              std::cout << frame <<", " << err << std::endl;
               twiddle.Update(err);
               vector<double> params = twiddle.GetCurrentParams();
-              std::cout << "current search: " << params[0] << ", " << params[1] << ", " << params[2] << std::endl;
+              //std::cout << "current search: " << params[0] << ", " << params[1] << ", " << params[2] << std::endl;
               //vector<double> bparams = twiddle.GetBestParams();
               //std::cout << "best search: " << bparams[0] << ", " << bparams[1] << ", " << bparams[2] << std::endl;
-              vector<double> dp = twiddle.GetDP();
-              std::cout << "current dp: " << dp[0] << ", " << dp[1] << ", " << dp[2] << std::endl;
+              //vector<double> dp = twiddle.GetDP();
+              //std::cout << "current dp: " << dp[0] << ", " << dp[1] << ", " << dp[2] << std::endl;
               lat_pid.Init(params[0], params[1], params[2]);
               //reset sim
               std::string msg = "42[\"reset\"]";
-              std::cout << msg << std::endl;
+              //std::cout << msg << std::endl;
               ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
               frame = 0;
               total_cte = 0;
@@ -99,6 +97,7 @@ int main() {
             } else {
               vector<double> result = twiddle.GetBestParams();
               std::cout << "stopped search: " << result[0] << ", " << result[1] << ", " << result[2] << std::endl;
+              exit(EXIT_SUCCESS);
             }
           }
 

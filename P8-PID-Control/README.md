@@ -1,97 +1,104 @@
-# CarND-Controls-PID
+# **PID Control**
 Self-Driving Car Engineer Nanodegree Program
+   
+## Project scope
+The goal for this project is to implement a proportional–integral–derivative controller to safely navigate around a virtual track. We are provided the car's cross track error, which is the distance from the car to the middle of the lane. Using a calibrated PID, the car should be able to complete a lap around the track, by following the middle of the road.
 
----
+For more details on the setup and constraints, see the [original instructions](instructions.md)
 
-## Dependencies
 
-* cmake >= 3.5
- * All OSes: [click here for installation instructions](https://cmake.org/install/)
-* make >= 4.1(mac, linux), 3.81(Windows)
-  * Linux: make is installed by default on most Linux distros
-  * Mac: [install Xcode command line tools to get make](https://developer.apple.com/xcode/features/)
-  * Windows: [Click here for installation instructions](http://gnuwin32.sourceforge.net/packages/make.htm)
-* gcc/g++ >= 5.4
-  * Linux: gcc / g++ is installed by default on most Linux distros
-  * Mac: same deal as make - [install Xcode command line tools]((https://developer.apple.com/xcode/features/)
-  * Windows: recommend using [MinGW](http://www.mingw.org/)
-* [uWebSockets](https://github.com/uWebSockets/uWebSockets)
-  * Run either `./install-mac.sh` or `./install-ubuntu.sh`.
-  * If you install from source, checkout to commit `e94b6e1`, i.e.
-    ```
-    git clone https://github.com/uWebSockets/uWebSockets 
-    cd uWebSockets
-    git checkout e94b6e1
-    ```
-    Some function signatures have changed in v0.14.x. See [this PR](https://github.com/udacity/CarND-MPC-Project/pull/3) for more details.
-* Simulator. You can download these from the [project intro page](https://github.com/udacity/self-driving-car-sim/releases) in the classroom.
+## Writeup / README
+The implementation of the [PID Controller](src/PID.cpp) is quite straight-forward and follows the instructions in the lectures.
 
-Fellow students have put together a guide to Windows set-up for the project [here](https://s3-us-west-1.amazonaws.com/udacity-selfdrivingcar/files/Kidnapped_Vehicle_Windows_Setup.pdf) if the environment you have set up for the Sensor Fusion projects does not work for this project. There's also an experimental patch for windows in this [PR](https://github.com/udacity/CarND-PID-Control-Project/pull/3).
+It consists of three main components:
+* Proportional - it influences the response proportionally to the current error (cross track error).
+* Integral - the controller is reponding to the historic cumulative value of the error. Once compensated for, the error should stop increasing, hence the control impact will not increase.
+* Derivative - is estimates the future trend of the error and tries to compensate the control accordingly.
 
-## Basic Build Instructions
+The values chosen for the PID controller are `0.477, 0.0, 4.31`. This means that:
+* a small (`0.477`) control is proportional to the error, that means a corrective control is always applied in response to the size of the error (how off-track we are)
+* no (`0`) influence from the integral part: since the simulation is perfect, and the track is circular, there is no hidden bias (drift) in the simulated car, that the controller needs to compensate for
+* a large (`4.31`) derivative influence means the controller is good at anticicpating the trend of the error and can compensate accordingly
 
-1. Clone this repo.
-2. Make a build directory: `mkdir build && cd build`
-3. Compile: `cmake .. && make`
-4. Run it: `./pid`. 
 
-Tips for setting up your environment can be found [here](https://classroom.udacity.com/nanodegrees/nd013/parts/40f38239-66b6-46ec-ae68-03afd8a601c8/modules/0949fca6-b379-42af-a919-ee50aa304e6a/lessons/f758c44c-5e40-4e01-93b5-1a82aa4e044f/concepts/23d376c7-0195-4276-bdf0-e02f1f3c665d)
+### Calibration
+The assignement suggested several approaches for figuring out the best parameters for the PID controller like random search, gradient descent, etc. I decided to go with the simple *twiddle* algorithm proposed in the lecture:
 
-## Editor Settings
+```python
+def twiddle(tol=0.2): 
+    p = [0, 0, 0]
+    dp = [1, 1, 1]
+    robot = make_robot()
+    x_trajectory, y_trajectory, best_err = run(robot, p)
 
-We've purposefully kept editor configuration files out of this repo in order to
-keep it as simple and environment agnostic as possible. However, we recommend
-using the following settings:
+    it = 0
+    while sum(dp) > tol:
+        print("Iteration {}, best error = {}".format(it, best_err))
+        for i in range(len(p)):
+            p[i] += dp[i]
+            robot = make_robot()
+            x_trajectory, y_trajectory, err = run(robot, p)
 
-* indent using spaces
-* set tab width to 2 spaces (keeps the matrices in source code aligned)
+            if err < best_err:
+                best_err = err
+                dp[i] *= 1.1
+            else:
+                p[i] -= 2 * dp[i]
+                robot = make_robot()
+                x_trajectory, y_trajectory, err = run(robot, p)
 
-## Code Style
+                if err < best_err:
+                    best_err = err
+                    dp[i] *= 1.1
+                else:
+                    p[i] += dp[i]
+                    dp[i] *= 0.9
+        it += 1
+    return p
+```
 
-Please (do your best to) stick to [Google's C++ style guide](https://google.github.io/styleguide/cppguide.html).
+The biggest challenge to adapting the [twiddle agorithm](src/twiddle.cpp) was to split it in order to accomodate the "event-based" nature of the simulator. The simulator is an independent application separate from your own. You can only communicate with it through web sockets: you send control data through a socket, and you receive the error through a socket(a callback). The downside is that you cannot simply run the simulation for a couple of seconds inside a while loop, stop it and start again, but instead you need to implement your logic through events using a state machine.
 
-## Project Instructions and Rubric
+This means we need to split the twiddle algorithm in three states, which correspond to instructions right after the parameter evaluation `run(robot, p)`
+```C++
+class Twiddle {
+    enum State {
+        INIT,
+		FIRST_CHECK,
+		SECOND_CHECK
+	};
+```
+We run the simulation with a given configuration of PID parameters (until a maximum number of steps is executed, we go off road, or get stuck)
+```C++
+if (frame >= MAX_FRAMES || (frame > 10 && std::abs(cte) > 6) || (frame > 100 && speed < 1)) {
+    if (!twiddle.IsDone()) {
+        ...
+    }
+}
+```
+We compute an error relevant to how bad the controller performed using this confguration, ex: how far did it go, and what was the average cross track error
+```C++
+double err = MAX_FRAMES - frame + total_cte/frame;
+```
+This error is then used to guide the next step in the twiddle logic, depending on the current state: increase/decrease the current parameter, or increase/decrease the search space for it
+```C++
+if (err < best_err) {
+    best_err = err;
+    dp[idx] *= 1.1;
+} else {
+    p[idx] += dp[idx];
+    dp[idx] *= 0.9;
+}
+```
+Intializing the twiddle algorithm with `0.0, 0.0, 0.0` for the parameters and `1.0, 1.0, 1.0` for the search space, we can leave it running for ~20 minutes (until the sum of `dp` is below 0.2: smaller is better, so a good indicative of the confidence in the found solution).
 
-Note: regardless of the changes you make, your project must be buildable using
-cmake and make!
+![calibration](img/calibration.png)
 
-More information is only accessible by people who are already enrolled in Term 2
-of CarND. If you are enrolled, see [the project page](https://classroom.udacity.com/nanodegrees/nd013/parts/40f38239-66b6-46ec-ae68-03afd8a601c8/modules/f1820894-8322-4bb3-81aa-b26b3c6dcbaf/lessons/e8235395-22dd-4b87-88e0-d108c5e5bbf4/concepts/6a4d8d42-6a04-4aa6-b284-1697c0fd6562)
-for instructions and the project rubric.
+For this, I created a new [calibration](src/calibrate.cpp) target, which found a solution for `0.477, 0.0, 4.31`. These values I then hard-coded in the [main](src/calibrate.cpp#L40) script and managed to complete a full round-trip on the track.
 
-## Hints!
+For the throttle, I decided that instead of continuously accelerating, to try [another PID controller](src/main.cpp#L43) which would keep a constant 25 MPH speed. Since I am not interested in the accuracy of the longitudinal control that much, a simple `1, 0, 0` seemed to do the job.
 
-* You don't have to follow this directory structure, but if you do, your work
-  will span all of the .cpp files here. Keep an eye out for TODOs.
+### Possible improvements
+Implementing the PID itself was a very simple task, most effort being spent in making the twiddle algorithm work with the simulation. So if I were to improve on something it would be the calibration part. Probably there are other search/optimization algorithms that are more suited to calibrating a PID in the context of this simulator. The most interesting approach for we would be to try a simple reinforcement algorithm.
 
-## Call for IDE Profiles Pull Requests
-
-Help your fellow students!
-
-We decided to create Makefiles with cmake to keep this project as platform
-agnostic as possible. Similarly, we omitted IDE profiles in order to we ensure
-that students don't feel pressured to use one IDE or another.
-
-However! I'd love to help people get up and running with their IDEs of choice.
-If you've created a profile for an IDE that you think other students would
-appreciate, we'd love to have you add the requisite profile files and
-instructions to ide_profiles/. For example if you wanted to add a VS Code
-profile, you'd add:
-
-* /ide_profiles/vscode/.vscode
-* /ide_profiles/vscode/README.md
-
-The README should explain what the profile does, how to take advantage of it,
-and how to install it.
-
-Frankly, I've never been involved in a project with multiple IDE profiles
-before. I believe the best way to handle this would be to keep them out of the
-repo root to avoid clutter. My expectation is that most profiles will include
-instructions to copy files to a new location to get picked up by the IDE, but
-that's just a guess.
-
-One last note here: regardless of the IDE used, every submitted project must
-still be compilable with cmake and make./
-
-## How to write a README
-A well written README file can enhance your project and portfolio.  Develop your abilities to create professional README files by completing [this free course](https://www.udacity.com/course/writing-readmes--ud777).
+Other improvements would probably mean implementing more advanced controlers like [Model Predictive Control (MPC)](https://en.wikipedia.org/wiki/Model_predictive_control) or [Stanley Controller](https://www.mathworks.com/help/driving/ref/lateralcontrollerstanley.html)

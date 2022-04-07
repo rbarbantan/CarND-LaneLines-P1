@@ -23,7 +23,6 @@ void PID::UpdateError(double cte) {
 
 double PID::TotalError() {
   double result = -Kp*p_error -Kd*d_error -Ki*i_error;
-  double result2 = std::fmin(1.0, std::fmax(-1.0, result));
-  //std::cout << result << ", " << result2 << std::endl;
+  result = std::fmin(1.0, std::fmax(-1.0, result));
   return result;
 }

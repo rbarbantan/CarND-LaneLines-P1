@@ -1,3 +1,4 @@
+import cv2
 from styx_msgs.msg import TrafficLight
 
 class TLClassifier(object):
@@ -15,5 +16,9 @@ class TLClassifier(object):
             int: ID of traffic light color (specified in styx_msgs/TrafficLight)
 
         """
-        #TODO implement light color prediction
+        (rows,cols,channels) = image.shape
+        if cols > 60 and rows > 60 :
+            cv2.circle(image, (50,50), 10, 255)
+        cv2.imshow("traffic_light", image)
+        cv2.waitKey(3)
         return TrafficLight.UNKNOWN

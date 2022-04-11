@@ -1,3 +1,4 @@
 ros/build
 ros/devel
 ros/.catkin_workspace
+*.pyc

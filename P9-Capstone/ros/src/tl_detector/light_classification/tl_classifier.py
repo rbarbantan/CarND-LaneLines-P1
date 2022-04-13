@@ -4,12 +4,13 @@ import cv2
 import numpy as np
 from styx_msgs.msg import TrafficLight
 
-SSD_GRAPH_FILE = '/home/ubuntu/projects/Udacity-CarND/P9a-Object-Detection-Lab/ssdlite_mobilenet_v2_coco_2018_05_09/frozen_inference_graph.pb'
+SSD_GRAPH_FILE = '../../../data/ssdlite_mobilenet_v2_coco_2018_05_09/frozen_inference_graph.pb'
 
 class TLClassifier(object):
     def __init__(self):
         self.graph = self.load_graph(SSD_GRAPH_FILE)
         self.sess = tf.Session(graph=self.graph)
+        rospy.logwarn('loaded %s' % SSD_GRAPH_FILE)
 
     def get_classification(self, image):
         """Determines the color of the traffic light in the image

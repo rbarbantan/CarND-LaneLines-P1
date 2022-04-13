@@ -2,3 +2,4 @@ ros/build
 ros/devel
 ros/.catkin_workspace
 *.pyc
+data/ssdlite_mobilenet_v2_coco_2018_05_09*

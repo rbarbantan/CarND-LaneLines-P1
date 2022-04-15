@@ -26,6 +26,8 @@ class Controller(object):
             self.throttle_controller.reset()
             return 0.0, 0.0, 0.0
         
+        current_linear_velocity = self.velocity_lp_filter.filt(current_linear_velocity)
+        
         steering = self.yaw_controller.get_steering(linear_velocity=proposed_linear_velocity, 
                                                     angular_velocity=proposed_angular_velocity, 
                                                     current_velocity=current_linear_velocity)

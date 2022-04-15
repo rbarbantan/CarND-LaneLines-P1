@@ -149,6 +149,8 @@ Since it is a powerful computer with a decent GPU the entire ROS setup and Simul
 
 Originally the waypoint publisher ran at a rate of 50 Hz and the traffic light detector would process images as fast as possible, but this caused the simulator in the Workspace to freeze completely when the camera was enabled, so that no images and not even pose updates were published to their topics. I solved the issue by limiting the publishing of the nodes at 10 Hz and similarly only trying to classify images at 10 Hz as well. This provided a boot in performance, while not impacting in any visible way the behavior of the system, resulting in the car stopping correctly at a red light and resuming driving when it was safe to do so.
 
+https://user-images.githubusercontent.com/1234088/163603943-9000e753-b7a5-4497-bc20-8544e38aae24.mp4
+
 ## Possible improvements
 The part that I would improve is definitely the image processing in the traffic light classification.
 While it works ok for the given two scenarios it would not scale well for other types of traffic lights so a better approach would be to gather a dataset of read and green traffic lights in various lightning settings and countries, and to train an image classifier on it.

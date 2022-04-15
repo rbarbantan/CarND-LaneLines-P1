@@ -35,13 +35,10 @@ class TLDetector(object):
         simulator. When testing on the vehicle, the color state will not be available. You'll need to
         rely on the position of the light and the camera image to predict it.
         '''
-        sub3 = rospy.Subscriber('/vehicle/traffic_lights', TrafficLightArray, self.traffic_cb)
-        sub6 = rospy.Subscriber('/image_color', Image, self.image_cb, queue_size=1)
-
+        
         config_string = rospy.get_param("/traffic_light_config")
         self.config = yaml.load(config_string)
 
-        self.upcoming_red_light_pub = rospy.Publisher('/traffic_waypoint', Int32, queue_size=1)
         self.bridge = CvBridge()
         self.light_classifier = TLClassifier()
         self.listener = tf.TransformListener()
@@ -50,8 +47,17 @@ class TLDetector(object):
         self.last_state = TrafficLight.UNKNOWN
         self.last_wp = -1
         self.state_count = 0
-        
-        rospy.spin()
+
+        sub3 = rospy.Subscriber('/vehicle/traffic_lights', TrafficLightArray, self.traffic_cb)
+        sub6 = rospy.Subscriber('/image_color', Image, self.image_cb, queue_size=1)
+        self.upcoming_red_light_pub = rospy.Publisher('/traffic_waypoint', Int32, queue_size=1)
+
+        self.loop()
+
+    def loop(self):
+        rate = rospy.Rate(10)
+        while not rospy.is_shutdown():
+            rate.sleep()
 
     def pose_cb(self, msg):
         self.pose = msg
@@ -118,7 +124,7 @@ class TLDetector(object):
             int: ID of traffic light color (specified in styx_msgs/TrafficLight)
 
         """
-        if(not self.has_image):
+        if(not (self.has_image and self.light_classifier) ):
             self.prev_light_loc = None
             return False
 
@@ -126,8 +132,10 @@ class TLDetector(object):
         # Get classification
         state_pred = self.light_classifier.get_classification(cv_image)
         
+        # uncomment the next two rows to compare the predicted traffic light state with the simulation ground truth
         #state_gt = light.state        
-        #rospy.logwarn('ground truth: %d, prediction: %d' % (state_gt, state_pred))
+        #rospy.logdebug('ground truth: %d, prediction: %d' % (state_gt, state_pred))
+
         return state_pred
 
     def process_traffic_lights(self):
@@ -144,7 +152,7 @@ class TLDetector(object):
 
         # List of positions that correspond to the line to stop in front of for a given intersection
         stop_line_positions = self.config['stop_line_positions']
-        if(self.pose):
+        if(self.pose and self.waypoints):
             car_position = self.get_closest_waypoint(self.pose.pose)
             diff = len(self.waypoints.waypoints)
             for i, l in enumerate(self.lights):
@@ -159,12 +167,10 @@ class TLDetector(object):
                     light = l
                     light_wp = wp_position
 
-        
         if light:
             state = self.get_light_state(light)
             return light_wp, state
 
-        #self.waypoints = None
         return -1, TrafficLight.UNKNOWN
 
 if __name__ == '__main__':

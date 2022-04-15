@@ -8,9 +8,10 @@ SSD_GRAPH_FILE = '../../../data/ssdlite_mobilenet_v2_coco_2018_05_09/frozen_infe
 
 class TLClassifier(object):
     def __init__(self):
+        rospy.loginfo('loading traffic light detection model from %s ...' % SSD_GRAPH_FILE)
         self.graph = self.load_graph(SSD_GRAPH_FILE)
         self.sess = tf.Session(graph=self.graph)
-        rospy.logwarn('loaded %s' % SSD_GRAPH_FILE)
+        rospy.loginfo('model loaded succesfully')
 
     def get_classification(self, image):
         """Determines the color of the traffic light in the image
@@ -25,14 +26,13 @@ class TLClassifier(object):
 
         # convert to RGB colorspace 
         converted = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        #with tf.Session(graph=self.graph) as sess:
-        sess = self.sess
-        image_tensor = sess.graph.get_tensor_by_name('image_tensor:0')
-        detection_boxes = sess.graph.get_tensor_by_name('detection_boxes:0')
-        detection_scores = sess.graph.get_tensor_by_name('detection_scores:0')
-        detection_classes = sess.graph.get_tensor_by_name('detection_classes:0')
+        
+        image_tensor = self.sess.graph.get_tensor_by_name('image_tensor:0')
+        detection_boxes = self.sess.graph.get_tensor_by_name('detection_boxes:0')
+        detection_scores = self.sess.graph.get_tensor_by_name('detection_scores:0')
+        detection_classes = self.sess.graph.get_tensor_by_name('detection_classes:0')
 
-        boxes, scores, classes = sess.run([detection_boxes, detection_scores, detection_classes], feed_dict={image_tensor: np.expand_dims(converted, 0)})
+        boxes, scores, classes = self.sess.run([detection_boxes, detection_scores, detection_classes], feed_dict={image_tensor: np.expand_dims(converted, 0)})
         # Remove unnecessary dimensions
         boxes = np.squeeze(boxes)
         scores = np.squeeze(scores)
@@ -46,27 +46,52 @@ class TLClassifier(object):
         # This converts the coordinates actual location on the image.
         (height, width, channels) = image.shape
         box_coords = self.to_image_coords(boxes, height, width)
-        #self.draw_boxes(image, box_coords, classes)
-
+    
+        light = self.classify_lights(image, box_coords, classes)
+    
+        return light
+    
+    def classify_lights(self, image, box_coords, classes):
         light = TrafficLight.UNKNOWN
+    
+        # if we detected traffic lights, classify the one with highest confidence
         if len(box_coords) > 0:
             bot, left, top, right = box_coords[0, ...].astype(int)
-            crop = image[bot:top, left:right]
-            crop[crop<220] = 0
+            crop = np.copy(image[bot:top, left:right])
 
+            # keep only high intensity pixels (the actual lights)
+            crop[crop<220] = 0
+            #cv2.imshow("traffic_light_crop", crop)
+            
+            # split in 3 parts vertically (a section for each light)
             h = crop.shape[0]/3
-            #cv2.imshow("traffic_light", cv2.vconcat([crop[:h,:,:], crop[h:2*h,:,:], crop[2*h:,:,:]]))
-            red = np.sum(crop[:h,:,:])
-            yellow = np.sum(crop[h:2*h,:,:])
-            green = np.sum(crop[2*h:,:,:])
+            
+            # image channels are BGR at this point
+            top_crop = crop[:h,:,2]
+            bottom_crop = crop[2*h:,:,1]
+            
+            red = np.sum(top_crop)
+            green = np.sum(bottom_crop)
 
             if green > red:
                 light = TrafficLight.GREEN
             else:
                 light = TrafficLight.RED
-            #cv2.imshow("traffic_light", crop)
-
-        #cv2.waitKey(3)
+            
+            # visual debugging
+            debug = False
+            middle_crop = np.sum(crop[h:2*h,:,:2], axis=2).astype(np.uint8)
+            if debug:
+                cv2.imshow("traffic_light_split", cv2.vconcat([top_crop, middle_crop, bottom_crop]))
+                if light == TrafficLight.GREEN:
+                    color = (0, 255, 0)
+                    text = "GO"
+                else:
+                    color = (0, 0, 255)
+                    text = "STOP"
+                cv2.putText(image, text, (50,150), cv2.FONT_HERSHEY_SIMPLEX, 5, color, 6, cv2.LINE_AA)
+                self.draw_boxes(image, box_coords, classes)
+    
         return light
 
     def load_graph(self, graph_file):
@@ -117,5 +142,5 @@ class TLClassifier(object):
             pts = np.array([[left, top], [left, bot], [right, bot], [right, top], [left, top]], np.int32)
             pts = pts.reshape((-1, 1, 2))
             cv2.polylines(image, [pts], True, color, thickness)
-        cv2.imshow("traffic_light", image)
+        cv2.imshow("traffic_light", cv2.resize(image, (image.shape[1]/4, image.shape[0]/4)))
         cv2.waitKey(3)

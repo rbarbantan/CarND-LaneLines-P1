@@ -144,6 +144,15 @@ def decelerate_waypoints(self, waypoints, closest_idx):
 ```
 
 ### Putting it all together
+
+```bash
+pip install -r requirements.txt
+bash prepare_data.sh
+cd ros
+catkin_make
+source devel/setup.sh
+roslaunch launch/styx.launch
+```
 Development and testing was done on my local Windows machine using [WSL2](https://docs.microsoft.com/en-us/windows/wsl/install) and an Ubuntu 16.04 image plus [ROS Kinetic](http://wiki.ros.org/kinetic).
 Since it is a powerful computer with a decent GPU the entire ROS setup and Simulation performed really well, but there were problems when trying the same code on the workspace provided by Udacity. 
 

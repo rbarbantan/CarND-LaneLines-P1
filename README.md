@@ -20,3 +20,5 @@ This repository is a collection of my submissions required for this nanodegree.
 
 [P8 - PID Control](P8-PID-Control)
 
+[P9 - Capstone](P9-Capstone)
+

@@ -107,3 +107,50 @@ and parking lot
 
 https://user-images.githubusercontent.com/1234088/163600081-c3f6c08f-ec2a-46ee-b7b5-5b28f1d0b34a.mp4
 
+
+### Stopping at a red light
+The final step in the project is to look at our waypoint and if there is a **red** traffic light ahead, to modify the velocity of for those points until the car comes to a complete stop.
+For this, I go back to the [waypoint_updater.py](ros/src/waypoint_updater/waypoint_updater.py) and subscribe to `/traffic_waypoint` which basically gives me the position of the next point where I need to stop (a.k.a. a red traffic light)
+
+```python
+def generate_lane(self):        
+        lane = Lane()
+        closest_idx = self.get_closest_waypoint_idx()
+        farthest_idx = closest_idx + LOOKAHEAD_WPS
+        base_waypoints = self.base_lane.waypoints[closest_idx:farthest_idx]
+        if self.stopline_wp_idx == -1 or (self.stopline_wp_idx >= farthest_idx):
+            lane.waypoints = base_waypoints
+        else:
+            lane.waypoints = self.decelerate_waypoints(base_waypoints, closest_idx)
+        return lane
+```
+
+We go though all waypoints and if we need to stop at a distance ahead, we compute the velocity so that we come to a complete stop given a maximum allowed deceleration:
+```python
+def decelerate_waypoints(self, waypoints, closest_idx):
+    temp = []
+    for i,wp in enumerate(waypoints):
+        p = Waypoint()
+        p.pose = wp.pose
+
+        stop_idx = max(self.stopline_wp_idx - closest_idx - 2, 0)  # two waypoints back from line
+        dist = self.distance(waypoints, i, stop_idx)
+        velocity = math.sqrt(2 * MAX_DECEL * dist)
+        if velocity < 1.0:
+            velocity = 0.0
+        p.twist.twist.linear.x = min(velocity, wp.twist.twist.linear.x)
+        temp.append(p)
+    return temp
+```
+
+### Putting it all together
+Development and testing was done on my local Windows machine using [WSL2](https://docs.microsoft.com/en-us/windows/wsl/install) and an Ubuntu 16.04 image plus [ROS Kinetic](http://wiki.ros.org/kinetic).
+Since it is a powerful computer with a decent GPU the entire ROS setup and Simulation performed really well, but there were problems when trying the same code on the workspace provided by Udacity. 
+
+Originally the waypoint publisher ran at a rate of 50 Hz and the traffic light detector would process images as fast as possible, but this caused the simulator in the Workspace to freeze completely when the camera was enabled, so that no images and not even pose updates were published to their topics. I solved the issue by limiting the publishing of the nodes at 10 Hz and similarly only trying to classify images at 10 Hz as well. This provided a boot in performance, while not impacting in any visible way the behavior of the system, resulting in the car stopping correctly at a red light and resuming driving when it was safe to do so.
+
+## Possible improvements
+The part that I would improve is definitely the image processing in the traffic light classification.
+While it works ok for the given two scenarios it would not scale well for other types of traffic lights so a better approach would be to gather a dataset of read and green traffic lights in various lightning settings and countries, and to train an image classifier on it.
+
+Other improvement ideas would include only searching for traffic lights in the image when we are near a traffic light so that we don't do unnecessary computations, or process the image only every other frame.

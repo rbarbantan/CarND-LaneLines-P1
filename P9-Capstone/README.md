@@ -101,9 +101,9 @@ else:
 
 This simple approach seems to perform fine on both the simulation
 
-![sim_traffic_video](imgs/sim_traffic.mp4)
+https://user-images.githubusercontent.com/1234088/163600018-01eb3784-a3ed-4ab8-979d-1a1e7dd011e5.mp4
 
 and parking lot
 
-![parkinglot_traffic_video](imgs/parkinglot_traffic.mp4)
+https://user-images.githubusercontent.com/1234088/163600081-c3f6c08f-ec2a-46ee-b7b5-5b28f1d0b34a.mp4
 

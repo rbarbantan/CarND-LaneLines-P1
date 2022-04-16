@@ -13,14 +13,14 @@ The architecture for the system and most of the code is already provided, with s
 ![arhitecture](imgs/final-project-ros-graph-v2.png)
 
 ### Car control
-As instructed in the video walkthroughs, I had to update [waypoint_updater.py](ros/src/waypoint_updater/waypoint_updater.py) to publish a list of 200 waypoints representing the trajectory the car should follow. We are provided information about the entire track, so we subscribe to the `/base_waypoints` and `/current_pose` topics to get all points and our current position.
+As instructed in the video walkthroughs, I had to update [waypoint_updater.py](ros/src/waypoint_updater/waypoint_updater.py) to publish a list of 40 waypoints representing the trajectory the car should follow. We are provided information about the entire track, so we subscribe to the `/base_waypoints` and `/current_pose` topics to get all points and our current position.
 
 ```python
 rospy.Subscriber('/current_pose', PoseStamped, self.pose_cb)
 rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb)
 ```
 
-Using the SciPy's [KDTree](https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.KDTree.html) we search for the next 200 points ahead of as publish this information to the `/final_waypoints` topic. These are picked up by other ros nodes and can be seen in the simulator as floating green orbs.
+Using the SciPy's [KDTree](https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.KDTree.html) we search for the next 40 points ahead of as publish this information to the `/final_waypoints` topic. These are picked up by other ros nodes and can be seen in the simulator as floating green orbs.
 
 ![trajectory](imgs/trajectory.png)
 

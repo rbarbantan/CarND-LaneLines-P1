@@ -75,7 +75,7 @@ by approximating the left and right lines. The pipeline goes like this:
 * un-distort the image
 * apply the color filter
 * change perspective
-* find the pixels describing the left and write lines
+* find the pixels describing the left and right lines
 * approximate them by fitting a quadratic polynomial
 * use the polynomials to compute the radius of the curvature of the road
 * approximate where we are relative to the center of the lane
